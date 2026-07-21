@@ -21,9 +21,14 @@ export function RaceListPage() {
     <div className="mx-auto max-w-2xl p-4">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">レース一覧</h1>
-        <button onClick={logout} className="text-sm text-gray-500 underline">
-          ログアウト
-        </button>
+        <div className="flex items-center gap-3 text-sm">
+          <Link to="/rules" className="text-gray-500 underline">
+            ルール管理
+          </Link>
+          <button onClick={logout} className="text-gray-500 underline">
+            ログアウト
+          </button>
+        </div>
       </div>
 
       <Link

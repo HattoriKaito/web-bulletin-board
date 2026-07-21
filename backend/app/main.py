@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.races import router as races_router
+from app.api.routes.rules import router as rules_router
 from app.core.config import settings
 
 app = FastAPI(title="BoatAI API")
@@ -17,6 +18,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(races_router)
+app.include_router(rules_router)
 
 
 @app.get("/health")

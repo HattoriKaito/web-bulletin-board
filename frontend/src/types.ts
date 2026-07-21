@@ -33,3 +33,11 @@ export interface Odds {
   odds_value: number;
   recorded_at: string;
 }
+
+export interface Rule {
+  id: number;
+  rule_text: string;
+  category: string | null;
+  is_active: boolean;
+  created_at: string;
+}
