@@ -2,10 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id, get_db
-from app.models import Odds, Race, RaceEntry
+from app.models import Odds, Prediction, Race, RaceEntry, Rule
 from app.schemas.odds import OddsBulkCreate, OddsRead, Stage
+from app.schemas.prediction import PredictionRead
 from app.schemas.race import RaceCreate, RaceRead, RaceUpdate
 from app.schemas.race_entry import RaceEntriesBulkUpsert, RaceEntryRead
+from app.services.ai_prediction import STAGE_ORDER, AIGenerationError, generate_prediction
 
 router = APIRouter(prefix="/races", tags=["races"])
 
@@ -142,3 +144,80 @@ def create_odds(
     db.add_all(odds_rows)
     db.flush()
     return odds_rows
+
+
+@router.get("/{race_id}/predictions", response_model=list[PredictionRead])
+def list_predictions(race_id: int, db: Session = Depends(get_db)) -> list[Prediction]:
+    _get_owned_race(db, race_id)
+    return (
+        db.query(Prediction)
+        .filter(Prediction.race_id == race_id)
+        .order_by(Prediction.created_at.desc())
+        .all()
+    )
+
+
+@router.post(
+    "/{race_id}/predictions",
+    response_model=PredictionRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_prediction(
+    race_id: int,
+    stage: Stage = Query(...),
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+) -> Prediction:
+    """指定stageのAI予想を生成する。
+
+    ユーザーが「AI予想を生成」ボタンを押したときにのみ呼ばれるエンドポイントで、
+    データ入力のたびに自動生成することはない。過去の予想は上書きせず、
+    呼ばれるたびに新しいPREDICTIONS行を追加する（3段階の履歴として残る）。
+    """
+    race = _get_owned_race(db, race_id)
+
+    entries = (
+        db.query(RaceEntry)
+        .filter(RaceEntry.race_id == race_id)
+        .order_by(RaceEntry.boat_number)
+        .all()
+    )
+    if len(entries) != 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="先に出走表（6艇分）を登録してください",
+        )
+
+    relevant_stages = STAGE_ORDER[: STAGE_ORDER.index(stage) + 1]
+    odds = (
+        db.query(Odds)
+        .filter(Odds.race_id == race_id, Odds.stage.in_(relevant_stages))
+        .order_by(Odds.recorded_at)
+        .all()
+    )
+    active_rules = (
+        db.query(Rule)
+        .filter(Rule.user_id == user_id, Rule.is_active.is_(True))
+        .all()
+    )
+
+    try:
+        output, input_snapshot = generate_prediction(
+            race, entries, odds, active_rules, stage
+        )
+    except AIGenerationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        ) from exc
+
+    prediction = Prediction(
+        race_id=race_id,
+        stage=stage,
+        suggested_bets=output.suggested_bets,
+        input_snapshot=input_snapshot,
+        summary_reasoning=output.summary_reasoning,
+        detailed_reasoning=output.detailed_reasoning,
+    )
+    db.add(prediction)
+    db.flush()
+    return prediction

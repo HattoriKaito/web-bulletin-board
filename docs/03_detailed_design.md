@@ -60,8 +60,10 @@ erDiagram
         int id PK
         int race_id FK
         string stage
-        string suggested_bets
-        text ai_reasoning
+        json suggested_bets
+        json input_snapshot
+        text summary_reasoning
+        text detailed_reasoning
         datetime created_at
     }
 
@@ -110,6 +112,7 @@ erDiagram
 ### テーブル補足
 - `RACES.race_type` は「一般戦／SG／G1」等を格納し、レース種別ごとの精度集計に利用する。
 - `PREDICTIONS.stage` は「entry_confirmed（出走表確定時点）」「pre_race（直前情報公開時点）」「final（締切直前）」の3値を想定。
+- `PREDICTIONS.suggested_bets` はAIが提案した3連単の組み合わせ配列（例：["1-2-3", ...]、5点）。`input_snapshot`はその時点のrace_entries・odds（該当stageまでの）・適用したis_active=trueのrulesをまるごと保存し、後から再現・検証できるようにする。`summary_reasoning`は一覧表示用の短い根拠、`detailed_reasoning`は艇ごとの詳細根拠（「もっと詳しく」表示用）。
 - `BETS.is_ai_suggested` によって、実際の買い目とAI提案買い目を区別し、収支シミュレーション比較に利用する。
 - `RULES` はユーザーごとに独立して管理し、`is_active` フラグでAI予想への反映有無を切り替え可能とする。
 - `ODDS.stage` は `PREDICTIONS.stage` と同じ3値（entry_confirmed／pre_race／final）を想定し、段階ごとのオッズ変動を記録できるようにする。1レコード＝1組み合わせ・1時点のオッズで、上書きせず記録し続ける（`recorded_at`で時系列を追える）。`combination`は3連単の組み合わせ（例："1-2-3"）。

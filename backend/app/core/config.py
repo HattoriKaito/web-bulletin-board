@@ -24,6 +24,9 @@ class Settings(BaseSettings):
 
     frontend_origin: str = "http://localhost:5173"
 
+    claude_model: str = "claude-opus-4-8"
+    anthropic_api_key: str = ""
+
     @property
     def database_url(self) -> str:
         return (

@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { getRace, listRaceEntries, upsertRaceEntries } from "../api/races";
 import type { RaceEntryInput } from "../api/races";
 import type { Race, RaceEntry } from "../types";
+import { PredictionPanel } from "../components/PredictionPanel";
 
 interface PreRaceFormRow {
   boat_number: number;
@@ -213,6 +214,8 @@ export function PreRaceInfoPage() {
           {saving ? "保存中..." : "直前情報を保存"}
         </button>
       </form>
+
+      <PredictionPanel raceId={raceIdNum} stage="pre_race" />
     </div>
   );
 }

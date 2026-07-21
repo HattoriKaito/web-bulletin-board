@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import { createOdds, getRace, listOdds } from "../api/races";
 import type { Odds, Race, Stage } from "../types";
+import { PredictionPanel } from "../components/PredictionPanel";
 
 interface OddsFormRow {
   combination: string;
@@ -182,6 +183,8 @@ export function OddsInputPage() {
           ))}
         </ul>
       )}
+
+      <PredictionPanel raceId={raceIdNum} stage="final" />
     </div>
   );
 }

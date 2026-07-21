@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -20,8 +21,10 @@ class Prediction(Base):
         ForeignKey("races.id", ondelete="CASCADE"), nullable=False
     )
     stage: Mapped[str] = mapped_column(String, nullable=False)
-    suggested_bets: Mapped[str] = mapped_column(String, nullable=False)
-    ai_reasoning: Mapped[str | None] = mapped_column(Text)
+    suggested_bets: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    input_snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    summary_reasoning: Mapped[str] = mapped_column(Text, nullable=False)
+    detailed_reasoning: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

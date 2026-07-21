@@ -41,3 +41,13 @@ export interface Rule {
   is_active: boolean;
   created_at: string;
 }
+
+export interface Prediction {
+  id: number;
+  race_id: number;
+  stage: Stage;
+  suggested_bets: string[];
+  summary_reasoning: string;
+  detailed_reasoning: string;
+  created_at: string;
+}
