@@ -2,15 +2,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getRace, listRaceEntries, upsertRaceEntries } from "../api/races";
 import type { RaceEntryInput } from "../api/races";
-import type { Race } from "../types";
+import type { Race, RaceEntry } from "../types";
 
-interface EntryFormRow {
+interface PreRaceFormRow {
   boat_number: number;
   racer_name: string;
-  local_win_rate: string;
-  national_win_rate: string;
-  motor_win_rate: string;
-  flag_status: string;
   entry_course: string;
   exhibition_time: string;
   weather_condition: string;
@@ -18,19 +14,15 @@ interface EntryFormRow {
   wind_speed: string;
 }
 
-function emptyRow(boatNumber: number): EntryFormRow {
+function toRow(entry: RaceEntry): PreRaceFormRow {
   return {
-    boat_number: boatNumber,
-    racer_name: "",
-    local_win_rate: "",
-    national_win_rate: "",
-    motor_win_rate: "",
-    flag_status: "",
-    entry_course: "",
-    exhibition_time: "",
-    weather_condition: "",
-    wind_direction: "",
-    wind_speed: "",
+    boat_number: entry.boat_number,
+    racer_name: entry.racer_name,
+    entry_course: entry.entry_course?.toString() ?? "",
+    exhibition_time: entry.exhibition_time?.toString() ?? "",
+    weather_condition: entry.weather_condition ?? "",
+    wind_direction: entry.wind_direction ?? "",
+    wind_speed: entry.wind_speed?.toString() ?? "",
   };
 }
 
@@ -47,14 +39,13 @@ function toStringOrNull(value: string): string | null {
 const inputClass =
   "rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800";
 
-export function RaceEntriesPage() {
+export function PreRaceInfoPage() {
   const { raceId } = useParams<{ raceId: string }>();
   const raceIdNum = Number(raceId);
 
   const [race, setRace] = useState<Race | null>(null);
-  const [rows, setRows] = useState<EntryFormRow[]>(() =>
-    Array.from({ length: 6 }, (_, i) => emptyRow(i + 1)),
-  );
+  const [existingEntries, setExistingEntries] = useState<RaceEntry[]>([]);
+  const [rows, setRows] = useState<PreRaceFormRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,26 +57,9 @@ export function RaceEntriesPage() {
       .then(([raceData, entries]) => {
         if (cancelled) return;
         setRace(raceData);
-        if (entries.length > 0) {
-          setRows(
-            entries
-              .slice()
-              .sort((a, b) => a.boat_number - b.boat_number)
-              .map((e) => ({
-                boat_number: e.boat_number,
-                racer_name: e.racer_name,
-                local_win_rate: e.local_win_rate?.toString() ?? "",
-                national_win_rate: e.national_win_rate?.toString() ?? "",
-                motor_win_rate: e.motor_win_rate?.toString() ?? "",
-                flag_status: e.flag_status ?? "",
-                entry_course: e.entry_course?.toString() ?? "",
-                exhibition_time: e.exhibition_time?.toString() ?? "",
-                weather_condition: e.weather_condition ?? "",
-                wind_direction: e.wind_direction ?? "",
-                wind_speed: e.wind_speed?.toString() ?? "",
-              })),
-          );
-        }
+        const sorted = entries.slice().sort((a, b) => a.boat_number - b.boat_number);
+        setExistingEntries(sorted);
+        setRows(sorted.map(toRow));
       })
       .catch((err) => setError(err instanceof Error ? err.message : "取得に失敗しました"))
       .finally(() => !cancelled && setLoading(false));
@@ -94,7 +68,7 @@ export function RaceEntriesPage() {
     };
   }, [raceIdNum]);
 
-  function updateRow(index: number, field: keyof EntryFormRow, value: string) {
+  function updateRow(index: number, field: keyof PreRaceFormRow, value: string) {
     setRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   }
 
@@ -104,21 +78,29 @@ export function RaceEntriesPage() {
     setSavedMessage(null);
     setSaving(true);
     try {
-      const entries: RaceEntryInput[] = rows.map((row) => ({
-        boat_number: row.boat_number,
-        racer_name: row.racer_name,
-        local_win_rate: toNumberOrNull(row.local_win_rate),
-        national_win_rate: toNumberOrNull(row.national_win_rate),
-        motor_win_rate: toNumberOrNull(row.motor_win_rate),
-        flag_status: toStringOrNull(row.flag_status),
-        entry_course: toNumberOrNull(row.entry_course),
-        exhibition_time: toNumberOrNull(row.exhibition_time),
-        weather_condition: toStringOrNull(row.weather_condition),
-        wind_direction: toStringOrNull(row.wind_direction),
-        wind_speed: toNumberOrNull(row.wind_speed),
-      }));
-      await upsertRaceEntries(raceIdNum, entries);
-      setSavedMessage("出走表を保存しました。");
+      // race_entriesはboat_numberの他に選手名・勝率等も必須項目のため、
+      // 既存データ(existingEntries)に直前情報の入力値をマージしてPUTする。
+      // （PUT /races/{id}/entriesは全件置き換えのため、この画面で
+      // 触っていない項目を欠落させないための措置）
+      const entries: RaceEntryInput[] = rows.map((row) => {
+        const original = existingEntries.find((e) => e.boat_number === row.boat_number);
+        return {
+          boat_number: row.boat_number,
+          racer_name: row.racer_name,
+          local_win_rate: original?.local_win_rate ?? null,
+          national_win_rate: original?.national_win_rate ?? null,
+          motor_win_rate: original?.motor_win_rate ?? null,
+          flag_status: original?.flag_status ?? null,
+          entry_course: toNumberOrNull(row.entry_course),
+          exhibition_time: toNumberOrNull(row.exhibition_time),
+          weather_condition: toStringOrNull(row.weather_condition),
+          wind_direction: toStringOrNull(row.wind_direction),
+          wind_speed: toNumberOrNull(row.wind_speed),
+        };
+      });
+      const updated = await upsertRaceEntries(raceIdNum, entries);
+      setExistingEntries(updated.slice().sort((a, b) => a.boat_number - b.boat_number));
+      setSavedMessage("直前情報を保存しました。");
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
     } finally {
@@ -128,13 +110,26 @@ export function RaceEntriesPage() {
 
   if (loading) return <p className="p-4 text-gray-500">読み込み中...</p>;
 
+  if (rows.length === 0) {
+    return (
+      <div className="mx-auto max-w-3xl p-4">
+        <Link to={`/races/${raceIdNum}/entries`} className="text-sm text-gray-500 underline">
+          ← 出走表入力へ戻る
+        </Link>
+        <p className="mt-4 text-gray-500">
+          先に出走表（選手名など）を登録してから直前情報を入力してください。
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl p-4">
       <Link to="/races" className="text-sm text-gray-500 underline">
         ← レース一覧へ戻る
       </Link>
       <h1 className="mt-2 mb-4 text-xl font-semibold text-gray-900 dark:text-gray-100">
-        出走表入力
+        直前情報入力
         {race && ` — ${race.venue} ${race.race_number}R (${race.race_date})`}
       </h1>
 
@@ -145,53 +140,9 @@ export function RaceEntriesPage() {
             className="rounded border border-gray-200 p-3 dark:border-gray-700"
           >
             <legend className="px-1 font-medium text-gray-900 dark:text-gray-100">
-              {row.boat_number}号艇
+              {row.boat_number}号艇 ・ {row.racer_name}
             </legend>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
-                選手名
-                <input
-                  required
-                  value={row.racer_name}
-                  onChange={(e) => updateRow(index, "racer_name", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
-                当地勝率
-                <input
-                  inputMode="decimal"
-                  value={row.local_win_rate}
-                  onChange={(e) => updateRow(index, "local_win_rate", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
-                全国勝率
-                <input
-                  inputMode="decimal"
-                  value={row.national_win_rate}
-                  onChange={(e) => updateRow(index, "national_win_rate", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
-                モーター勝率
-                <input
-                  inputMode="decimal"
-                  value={row.motor_win_rate}
-                  onChange={(e) => updateRow(index, "motor_win_rate", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
-                フラグ（F/L等）
-                <input
-                  value={row.flag_status}
-                  onChange={(e) => updateRow(index, "flag_status", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
               <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
                 進入コース
                 <input
@@ -246,10 +197,10 @@ export function RaceEntriesPage() {
           <div className="flex flex-col gap-2">
             <p className="text-sm text-green-600">{savedMessage}</p>
             <Link
-              to={`/races/${raceIdNum}/pre-race`}
+              to={`/races/${raceIdNum}/odds`}
               className="inline-block w-fit rounded bg-indigo-600 px-3 py-2 text-sm text-white"
             >
-              → 直前情報入力へ
+              → オッズ入力へ
             </Link>
           </div>
         )}
@@ -259,7 +210,7 @@ export function RaceEntriesPage() {
           disabled={saving}
           className="rounded bg-indigo-600 px-3 py-2 text-white disabled:opacity-50"
         >
-          {saving ? "保存中..." : "6艇まとめて保存"}
+          {saving ? "保存中..." : "直前情報を保存"}
         </button>
       </form>
     </div>

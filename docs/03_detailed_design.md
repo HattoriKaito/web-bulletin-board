@@ -18,6 +18,7 @@ erDiagram
     RACES ||--o{ PREDICTIONS : "has"
     RACES ||--o{ BETS : "has"
     RACES ||--o{ RESULTS : "has"
+    RACES ||--o{ ODDS : "has"
     PREDICTIONS ||--o{ PREDICTION_RULES : "applies"
     RULES ||--o{ PREDICTION_RULES : "used_in"
 
@@ -95,6 +96,15 @@ erDiagram
         int payout_amount
         datetime created_at
     }
+
+    ODDS {
+        int id PK
+        int race_id FK
+        string stage
+        string combination
+        float odds_value
+        datetime recorded_at
+    }
 ```
 
 ### テーブル補足
@@ -102,6 +112,7 @@ erDiagram
 - `PREDICTIONS.stage` は「entry_confirmed（出走表確定時点）」「pre_race（直前情報公開時点）」「final（締切直前）」の3値を想定。
 - `BETS.is_ai_suggested` によって、実際の買い目とAI提案買い目を区別し、収支シミュレーション比較に利用する。
 - `RULES` はユーザーごとに独立して管理し、`is_active` フラグでAI予想への反映有無を切り替え可能とする。
+- `ODDS.stage` は `PREDICTIONS.stage` と同じ3値（entry_confirmed／pre_race／final）を想定し、段階ごとのオッズ変動を記録できるようにする。1レコード＝1組み合わせ・1時点のオッズで、上書きせず記録し続ける（`recorded_at`で時系列を追える）。`combination`は3連単の組み合わせ（例："1-2-3"）。
 
 ## 3. 画面遷移図
 

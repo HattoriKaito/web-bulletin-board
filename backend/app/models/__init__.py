@@ -6,6 +6,7 @@ from app.models.prediction_rule import PredictionRule
 from app.models.rule import Rule
 from app.models.bet import Bet
 from app.models.result import Result
+from app.models.odds import Odds
 
 __all__ = [
     "User",
@@ -16,4 +17,5 @@ __all__ = [
     "Rule",
     "Bet",
     "Result",
+    "Odds",
 ]

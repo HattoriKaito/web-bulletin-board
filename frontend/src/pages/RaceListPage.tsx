@@ -54,6 +54,17 @@ export function RaceListPage() {
                 {race.race_date} ・ {race.race_type}
               </span>
             </Link>
+            <div className="mt-2 flex gap-3 text-xs">
+              <Link to={`/races/${race.id}/entries`} className="text-indigo-600 underline">
+                出走表
+              </Link>
+              <Link to={`/races/${race.id}/pre-race`} className="text-indigo-600 underline">
+                直前情報
+              </Link>
+              <Link to={`/races/${race.id}/odds`} className="text-indigo-600 underline">
+                オッズ
+              </Link>
+            </div>
           </li>
         ))}
       </ul>

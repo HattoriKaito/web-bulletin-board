@@ -22,3 +22,14 @@ export interface RaceEntry {
   wind_direction: string | null;
   wind_speed: number | null;
 }
+
+export type Stage = "entry_confirmed" | "pre_race" | "final";
+
+export interface Odds {
+  id: number;
+  race_id: number;
+  stage: Stage;
+  combination: string;
+  odds_value: number;
+  recorded_at: string;
+}

@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { Race, RaceEntry } from "../types";
+import type { Odds, Race, RaceEntry, Stage } from "../types";
 
 export interface RaceCreateInput {
   venue: string;
@@ -52,5 +52,26 @@ export function upsertRaceEntries(
   return apiFetch<RaceEntry[]>(`/races/${raceId}/entries`, {
     method: "PUT",
     body: JSON.stringify({ entries }),
+  });
+}
+
+export interface OddsEntryInput {
+  combination: string;
+  odds_value: number;
+}
+
+export function listOdds(raceId: number, stage?: Stage): Promise<Odds[]> {
+  const query = stage ? `?stage=${stage}` : "";
+  return apiFetch<Odds[]>(`/races/${raceId}/odds${query}`);
+}
+
+export function createOdds(
+  raceId: number,
+  stage: Stage,
+  entries: OddsEntryInput[],
+): Promise<Odds[]> {
+  return apiFetch<Odds[]>(`/races/${raceId}/odds`, {
+    method: "POST",
+    body: JSON.stringify({ stage, entries }),
   });
 }
