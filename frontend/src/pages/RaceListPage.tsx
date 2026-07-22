@@ -69,6 +69,12 @@ export function RaceListPage() {
               <Link to={`/races/${race.id}/odds`} className="text-indigo-600 underline">
                 オッズ
               </Link>
+              <Link to={`/races/${race.id}/bets`} className="text-indigo-600 underline">
+                買い目
+              </Link>
+              <Link to={`/races/${race.id}/results`} className="text-indigo-600 underline">
+                結果
+              </Link>
             </div>
           </li>
         ))}

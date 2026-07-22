@@ -1,21 +1,11 @@
-import re
 from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.combination import validate_combination
+
 Stage = Literal["entry_confirmed", "pre_race", "final"]
-
-_COMBINATION_PATTERN = re.compile(r"^[1-6]-[1-6]-[1-6]$")
-
-
-def _validate_combination(value: str) -> str:
-    if not _COMBINATION_PATTERN.match(value):
-        raise ValueError('combinationは"1-2-3"のように1〜6の3艇で指定してください')
-    boats = value.split("-")
-    if len(set(boats)) != 3:
-        raise ValueError("combinationの3艇は重複できません")
-    return value
 
 
 class OddsEntryInput(BaseModel):
@@ -24,8 +14,8 @@ class OddsEntryInput(BaseModel):
 
     @field_validator("combination")
     @classmethod
-    def validate_combination(cls, value: str) -> str:
-        return _validate_combination(value)
+    def _validate_combination(cls, value: str) -> str:
+        return validate_combination(value)
 
 
 class OddsBulkCreate(BaseModel):

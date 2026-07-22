@@ -2,11 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id, get_db
-from app.models import Odds, Prediction, Race, RaceEntry, Rule
+from app.core.combination import normalize_combination
+from app.models import Bet, Odds, Prediction, Race, RaceEntry, Result, Rule
+from app.schemas.bet import BetRead, BetsConfirmInput, BetsConfirmResult
 from app.schemas.odds import OddsBulkCreate, OddsRead, Stage
 from app.schemas.prediction import PredictionRead
 from app.schemas.race import RaceCreate, RaceRead, RaceUpdate
 from app.schemas.race_entry import RaceEntriesBulkUpsert, RaceEntryRead
+from app.schemas.result import BetHitInfo, ResultRead, ResultUpsert
 from app.services.ai_prediction import STAGE_ORDER, AIGenerationError, generate_prediction
 
 router = APIRouter(prefix="/races", tags=["races"])
@@ -221,3 +224,143 @@ def create_prediction(
     db.add(prediction)
     db.flush()
     return prediction
+
+
+@router.get("/{race_id}/bets", response_model=list[BetRead])
+def list_bets(race_id: int, db: Session = Depends(get_db)) -> list[Bet]:
+    _get_owned_race(db, race_id)
+    return (
+        db.query(Bet)
+        .filter(Bet.race_id == race_id)
+        .order_by(Bet.is_ai_suggested.desc(), Bet.id)
+        .all()
+    )
+
+
+@router.put("/{race_id}/bets", response_model=BetsConfirmResult)
+def confirm_bets(
+    race_id: int, payload: BetsConfirmInput, db: Session = Depends(get_db)
+) -> BetsConfirmResult:
+    """実際に購入した買い目（is_ai_suggested=false）を確定する。全件置き換え。
+
+    初めて確定するとき（is_ai_suggested=trueの行がまだ無いとき）に限り、
+    その時点のstage=final AI予想（PREDICTIONS.suggested_bets）があれば
+    1点200円でBETSに自動コピーする。final予想が無ければAI提案側は作成せず
+    （他stageの予想で代用しない）、ai_suggested_available=falseを返す。
+    AI提案は一度作成したら以降の買い目再編集では再コピーしない
+    （odds/predictionsと同じく「後から生成し直しても過去の記録は
+    上書きしない」方針に合わせている）。
+    """
+    _get_owned_race(db, race_id)
+
+    db.query(Bet).filter(
+        Bet.race_id == race_id, Bet.is_ai_suggested.is_(False)
+    ).delete()
+    actual_bets = [
+        Bet(
+            race_id=race_id,
+            bet_combination=entry.combination,
+            amount=entry.amount,
+            is_ai_suggested=False,
+        )
+        for entry in payload.entries
+    ]
+    db.add_all(actual_bets)
+    db.flush()
+    actual_bets.sort(key=lambda b: b.id)
+
+    ai_suggested_bets = (
+        db.query(Bet)
+        .filter(Bet.race_id == race_id, Bet.is_ai_suggested.is_(True))
+        .order_by(Bet.id)
+        .all()
+    )
+    if not ai_suggested_bets:
+        latest_final_prediction = (
+            db.query(Prediction)
+            .filter(Prediction.race_id == race_id, Prediction.stage == "final")
+            .order_by(Prediction.created_at.desc())
+            .first()
+        )
+        if latest_final_prediction is not None:
+            ai_suggested_bets = [
+                Bet(
+                    race_id=race_id,
+                    bet_combination=combo,
+                    amount=200,
+                    is_ai_suggested=True,
+                )
+                for combo in latest_final_prediction.suggested_bets
+            ]
+            db.add_all(ai_suggested_bets)
+            db.flush()
+
+    return BetsConfirmResult(
+        actual_bets=actual_bets,
+        ai_suggested_bets=ai_suggested_bets,
+        ai_suggested_available=len(ai_suggested_bets) > 0,
+    )
+
+
+def _build_result_read(db: Session, result: Result) -> ResultRead:
+    bets = (
+        db.query(Bet)
+        .filter(Bet.race_id == result.race_id)
+        .order_by(Bet.is_ai_suggested.desc(), Bet.id)
+        .all()
+    )
+    normalized_finish = normalize_combination(result.finishing_order)
+    bet_results = [
+        BetHitInfo(
+            bet_id=b.id,
+            combination=b.bet_combination,
+            amount=b.amount,
+            is_ai_suggested=b.is_ai_suggested,
+            is_hit=normalize_combination(b.bet_combination) == normalized_finish,
+        )
+        for b in bets
+    ]
+    return ResultRead(
+        id=result.id,
+        race_id=result.race_id,
+        finishing_order=result.finishing_order,
+        payout_amount=result.payout_amount,
+        created_at=result.created_at,
+        bet_results=bet_results,
+    )
+
+
+@router.get("/{race_id}/results", response_model=ResultRead | None)
+def get_result(race_id: int, db: Session = Depends(get_db)) -> ResultRead | None:
+    _get_owned_race(db, race_id)
+    result = db.query(Result).filter(Result.race_id == race_id).first()
+    if result is None:
+        return None
+    return _build_result_read(db, result)
+
+
+@router.put("/{race_id}/results", response_model=ResultRead)
+def upsert_result(
+    race_id: int, payload: ResultUpsert, db: Session = Depends(get_db)
+) -> ResultRead:
+    """レース結果を記録（既存があれば更新）し、的中判定を計算して返す。
+
+    的中判定はbet_combinationとfinishing_orderを正規化（全角→半角・前後空白除去）
+    した上での完全一致で行う（3連単は着順の完全一致が的中条件のため）。
+    判定結果はDBに保存せず、都度計算して返す（結果を後から訂正しても
+    古い判定が残らないようにするため）。
+    """
+    _get_owned_race(db, race_id)
+    result = db.query(Result).filter(Result.race_id == race_id).first()
+    if result is None:
+        result = Result(
+            race_id=race_id,
+            finishing_order=payload.finishing_order,
+            payout_amount=payload.payout_amount,
+        )
+        db.add(result)
+    else:
+        result.finishing_order = payload.finishing_order
+        result.payout_amount = payload.payout_amount
+    db.flush()
+    return _build_result_read(db, result)

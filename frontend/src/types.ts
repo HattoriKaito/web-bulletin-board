@@ -51,3 +51,35 @@ export interface Prediction {
   detailed_reasoning: string;
   created_at: string;
 }
+
+export interface Bet {
+  id: number;
+  race_id: number;
+  bet_combination: string;
+  amount: number;
+  is_ai_suggested: boolean;
+  created_at: string;
+}
+
+export interface BetsConfirmResult {
+  actual_bets: Bet[];
+  ai_suggested_bets: Bet[];
+  ai_suggested_available: boolean;
+}
+
+export interface BetHitInfo {
+  bet_id: number;
+  combination: string;
+  amount: number;
+  is_ai_suggested: boolean;
+  is_hit: boolean;
+}
+
+export interface RaceResult {
+  id: number;
+  race_id: number;
+  finishing_order: string;
+  payout_amount: number;
+  created_at: string;
+  bet_results: BetHitInfo[];
+}

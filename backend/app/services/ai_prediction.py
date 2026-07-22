@@ -1,10 +1,10 @@
 import json
-import re
 from typing import Any
 
 import anthropic
 from pydantic import BaseModel, Field
 
+from app.core.combination import COMBINATION_PATTERN
 from app.core.config import settings
 from app.models import Odds, Race, RaceEntry, Rule
 
@@ -15,8 +15,6 @@ _STAGE_LABELS = {
     "pre_race": "直前情報公開時点",
     "final": "締切直前（最終オッズ確定時点）",
 }
-
-_COMBINATION_PATTERN = re.compile(r"^[1-6]-[1-6]-[1-6]$")
 
 _client: anthropic.Anthropic | None = None
 
@@ -132,7 +130,7 @@ def _validate_bets(bets: list[str]) -> None:
         raise ValueError(f"買い目は5点である必要があります（{len(bets)}点でした）")
     seen: set[str] = set()
     for combo in bets:
-        if not _COMBINATION_PATTERN.match(combo):
+        if not COMBINATION_PATTERN.match(combo):
             raise ValueError(f"買い目の形式が不正です: {combo}")
         boats = combo.split("-")
         if len(set(boats)) != 3:

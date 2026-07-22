@@ -185,6 +185,13 @@ export function OddsInputPage() {
       )}
 
       <PredictionPanel raceId={raceIdNum} stage="final" />
+
+      <Link
+        to={`/races/${raceIdNum}/bets`}
+        className="mt-6 inline-block w-fit rounded bg-indigo-600 px-3 py-2 text-sm text-white"
+      >
+        → 買い目確定へ
+      </Link>
     </div>
   );
 }
