@@ -25,38 +25,43 @@ export function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-4">
-      <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">BoatAI ログイン</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-          メールアドレス
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-800"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-          パスワード
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-800"
-          />
-        </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded bg-indigo-600 px-3 py-2 text-white disabled:opacity-50"
+    <div className="flex min-h-screen flex-col justify-center bg-navy-950 p-4">
+      <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
+        <h1 className="font-heading text-3xl font-bold text-ink-100">BoatAI</h1>
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-3 rounded-xl border border-navy-600 bg-navy-800 p-4 shadow-md shadow-black/20"
         >
-          {submitting ? "ログイン中..." : "ログイン"}
-        </button>
-      </form>
+          <label className="flex flex-col gap-1 text-sm text-ink-300">
+            メールアドレス
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded-lg border border-navy-500 bg-navy-900 px-3 py-2 text-ink-100 focus:border-accent-400 focus:outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-ink-300">
+            パスワード
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="rounded-lg border border-navy-500 bg-navy-900 px-3 py-2 text-ink-100 focus:border-accent-400 focus:outline-none"
+            />
+          </label>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-lg bg-accent-500 px-3 py-2 font-medium text-white shadow-lg shadow-accent-500/20 hover:bg-accent-600 disabled:opacity-50"
+          >
+            {submitting ? "ログイン中..." : "ログイン"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -31,29 +31,31 @@ export function ImageExtractPanel({
   }
 
   return (
-    <div className="mb-4 flex flex-col gap-2 rounded border border-dashed border-indigo-300 p-3 dark:border-indigo-700">
-      <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
+    <div className="mb-4 flex flex-col gap-2 rounded-xl border border-dashed border-accent-500/50 bg-navy-800 p-3">
+      <label className="flex flex-col gap-1 text-sm text-ink-300">
         画像（複数可）
         <input
           type="file"
           accept="image/*"
           multiple
           onChange={handleFileChange}
-          className="text-sm text-gray-600 dark:text-gray-400"
+          className="text-sm text-ink-300"
         />
       </label>
       <button
         type="button"
         onClick={handleExtract}
         disabled={files.length === 0 || extracting}
-        className="w-fit rounded border border-indigo-300 px-3 py-1.5 text-sm text-indigo-700 disabled:opacity-50 dark:border-indigo-700 dark:text-indigo-300"
+        className="w-fit rounded-lg border border-accent-400 px-3 py-1.5 text-sm font-medium text-accent-400 hover:bg-accent-500/10 disabled:opacity-50"
       >
         {extracting ? "読み取り中..." : label}
       </button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <p className="text-xs text-gray-500">
+      {error && <p className="text-sm text-red-400">{error}</p>}
+      <p className="text-xs text-ink-400">
         読み取り結果はフォームに仮入力されるだけです。内容を確認・修正してから保存してください。
-        自信が持てなかった項目は背景色で示されます。
+        自信が持てなかった項目は
+        <span className="text-caution-400">黄色</span>
+        で示されます。
       </p>
     </div>
   );

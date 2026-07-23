@@ -4,7 +4,7 @@ import { createRule, deleteRule, listRules, updateRule } from "../api/rules";
 import type { Rule } from "../types";
 
 const inputClass =
-  "rounded border border-gray-300 px-2 py-1.5 text-base dark:border-gray-600 dark:bg-gray-800";
+  "rounded-lg border border-navy-500 bg-navy-900 px-2 py-1.5 text-base text-ink-100 placeholder:text-ink-400 focus:border-accent-400 focus:outline-none";
 
 export function RulesPage() {
   const [rules, setRules] = useState<Rule[]>([]);
@@ -117,140 +117,134 @@ export function RulesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">ルール管理</h1>
-        <Link to="/races" className="text-sm text-gray-500 underline">
-          レース一覧へ
-        </Link>
-      </div>
+    <div className="min-h-screen bg-navy-950">
+      <div className="mx-auto max-w-2xl p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="font-heading text-xl font-bold text-ink-100">ルール管理</h1>
+          <Link to="/races" className="text-sm text-ink-400 underline hover:text-ink-100">
+            レース一覧へ
+          </Link>
+        </div>
 
-      <form
-        onSubmit={handleCreate}
-        className="mb-6 flex flex-col gap-2 rounded border border-gray-200 p-3 dark:border-gray-700"
-      >
-        <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-          新しいルール
-          <textarea
-            required
-            value={newText}
-            onChange={(e) => setNewText(e.target.value)}
-            placeholder="例：当地2連対率トップ艇は頭候補から消さない"
-            rows={2}
-            className={inputClass}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-          カテゴリ（任意）
-          <input
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            placeholder="例：当地成績"
-            className={inputClass}
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={creating}
-          className="w-fit rounded bg-indigo-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+        <form
+          onSubmit={handleCreate}
+          className="mb-6 flex flex-col gap-2 rounded-xl border border-navy-600 bg-navy-800 p-3 shadow-md shadow-black/20"
         >
-          {creating ? "追加中..." : "+ ルールを追加"}
-        </button>
-      </form>
-
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
-      {loading && <p className="text-gray-500">読み込み中...</p>}
-      {!loading && rules.length === 0 && (
-        <p className="text-gray-500">まだルールが登録されていません。</p>
-      )}
-
-      <ul className="flex flex-col gap-2">
-        {rules.map((rule) => (
-          <li
-            key={rule.id}
-            className="rounded border border-gray-200 p-3 dark:border-gray-700"
+          <label className="flex flex-col gap-1 text-sm text-ink-300">
+            新しいルール
+            <textarea
+              required
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              placeholder="例：当地2連対率トップ艇は頭候補から消さない"
+              rows={2}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-ink-300">
+            カテゴリ（任意）
+            <input
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              placeholder="例：当地成績"
+              className={inputClass}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={creating}
+            className="w-fit rounded-lg bg-accent-500 px-3 py-2 text-sm font-medium text-white shadow-md shadow-accent-500/20 hover:bg-accent-600 disabled:opacity-50"
           >
-            {editingId === rule.id ? (
-              <div className="flex flex-col gap-2">
-                <textarea
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  rows={2}
-                  className={inputClass}
-                />
-                <input
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value)}
-                  placeholder="カテゴリ（任意）"
-                  className={inputClass}
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => saveEdit(rule.id)}
-                    disabled={savingEdit}
-                    className="rounded bg-indigo-600 px-3 py-1 text-sm text-white disabled:opacity-50"
-                  >
-                    保存
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelEdit}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm dark:border-gray-600"
-                  >
-                    キャンセル
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <p
-                    className={
-                      rule.is_active
-                        ? "text-gray-900 dark:text-gray-100"
-                        : "text-gray-400 line-through dark:text-gray-500"
-                    }
-                  >
-                    {rule.rule_text}
-                  </p>
-                  {rule.category && (
-                    <span className="mt-1 inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                      {rule.category}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-shrink-0 flex-col items-end gap-2">
-                  <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                    <input
-                      type="checkbox"
-                      checked={rule.is_active}
-                      onChange={() => handleToggleActive(rule)}
-                    />
-                    有効
-                  </label>
-                  <div className="flex gap-2 text-xs">
+            {creating ? "追加中..." : "+ ルールを追加"}
+          </button>
+        </form>
+
+        {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
+        {loading && <p className="text-ink-400">読み込み中...</p>}
+        {!loading && rules.length === 0 && <p className="text-ink-400">まだルールが登録されていません。</p>}
+
+        <ul className="flex flex-col gap-2">
+          {rules.map((rule) => (
+            <li
+              key={rule.id}
+              className="rounded-xl border border-navy-600 bg-navy-800 p-3 shadow-md shadow-black/20"
+            >
+              {editingId === rule.id ? (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    rows={2}
+                    className={inputClass}
+                  />
+                  <input
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                    placeholder="カテゴリ（任意）"
+                    className={inputClass}
+                  />
+                  <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => startEdit(rule)}
-                      className="text-indigo-600 underline"
+                      onClick={() => saveEdit(rule.id)}
+                      disabled={savingEdit}
+                      className="rounded-lg bg-accent-500 px-3 py-1 text-sm font-medium text-white hover:bg-accent-600 disabled:opacity-50"
                     >
-                      編集
+                      保存
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(rule.id)}
-                      className="text-red-600 underline"
+                      onClick={cancelEdit}
+                      className="rounded-lg border border-navy-500 px-3 py-1 text-sm text-ink-300 hover:text-ink-100"
                     >
-                      削除
+                      キャンセル
                     </button>
                   </div>
                 </div>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <p className={rule.is_active ? "text-ink-100" : "text-ink-400 line-through"}>
+                      {rule.rule_text}
+                    </p>
+                    {rule.category && (
+                      <span className="mt-1 inline-block rounded-full bg-navy-700 px-2 py-0.5 text-xs text-ink-300">
+                        {rule.category}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                    <label className="flex items-center gap-1 text-xs text-ink-300">
+                      <input
+                        type="checkbox"
+                        checked={rule.is_active}
+                        onChange={() => handleToggleActive(rule)}
+                      />
+                      有効
+                    </label>
+                    <div className="flex gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(rule)}
+                        className="text-accent-400 underline"
+                      >
+                        編集
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(rule.id)}
+                        className="text-red-400 underline"
+                      >
+                        削除
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

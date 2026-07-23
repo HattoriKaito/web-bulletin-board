@@ -1,10 +1,59 @@
 @import "tailwindcss";
 
+/* このアプリはOSの明暗設定に関わらず常にネイビーダーク基調で統一する
+   （ライト/ダークの切り替えUIは提供しない）ため、Tailwindのdark:を
+   メディアクエリ判定ではなくclass="dark"（index.htmlのhtml要素に付与）で
+   強制的に有効化する。既存の各画面で使われているdark:系クラスも、
+   このアプリでは実質「常時適用される正式なスタイル」として機能する。 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@import "@fontsource/zen-kaku-gothic-new/700.css";
+@import "@fontsource/zen-kaku-gothic-new/900.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
+@import "@fontsource/jetbrains-mono/700.css";
+
+@theme {
+  --font-heading: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --color-navy-950: #060a14;
+  --color-navy-900: #0b1120;
+  --color-navy-800: #121b30;
+  --color-navy-700: #1a2540;
+  --color-navy-600: #263258;
+  --color-navy-500: #3a4a78;
+  --color-navy-400: #5b6d9e;
+
+  --color-ink-100: #eef1f8;
+  --color-ink-300: #b7c0d8;
+  --color-ink-400: #93a0bf;
+
+  --color-accent-400: #6f8dff;
+  --color-accent-500: #4f6dff;
+  --color-accent-600: #3b54e6;
+
+  /* 艇番カラー（1号艇=白 2号艇=黒 3号艇=赤 4号艇=青 5号艇=黄 6号艇=緑） */
+  --color-boat-1: #f4f6fb;
+  --color-boat-2: #1c2130;
+  --color-boat-3: #e0303f;
+  --color-boat-4: #2266e8;
+  --color-boat-5: #f2c11d;
+  --color-boat-6: #1f9e52;
+
+  /* 画像自動入力の「不確実」強調や、その他の注意喚起表現で共通して使う色 */
+  --color-caution-400: #f2c11d;
+  --color-caution-950: #2e2408;
+}
+
 html {
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  font-family: system-ui, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+  background-color: var(--color-navy-950);
+  color: var(--color-ink-100);
 }

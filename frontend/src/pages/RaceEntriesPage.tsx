@@ -5,6 +5,7 @@ import type { RaceEntryInput } from "../api/races";
 import type { Race, RaceEntry } from "../types";
 import { PredictionPanel } from "../components/PredictionPanel";
 import { ImageExtractPanel } from "../components/ImageExtractPanel";
+import { BoatBadge } from "../components/BoatBadge";
 
 interface EntryFormRow {
   boat_number: number;
@@ -37,9 +38,9 @@ function toStringOrNull(value: string): string | null {
 }
 
 const inputClass =
-  "rounded border border-gray-300 px-2 py-1.5 text-base dark:border-gray-600 dark:bg-gray-800";
+  "rounded-lg border border-navy-500 bg-navy-900 px-2 py-1.5 text-base text-ink-100 placeholder:text-ink-400 focus:border-accent-400 focus:outline-none";
 const uncertainInputClass =
-  "rounded border border-amber-400 bg-amber-50 px-2 py-1.5 text-base dark:border-amber-600 dark:bg-amber-950";
+  "rounded-lg border border-caution-400 bg-caution-950 px-2 py-1.5 text-base text-ink-100 focus:border-caution-400 focus:outline-none";
 
 export function RaceEntriesPage() {
   const { raceId } = useParams<{ raceId: string }>();
@@ -96,8 +97,9 @@ export function RaceEntriesPage() {
     });
   }
 
-  function fieldClass(boatNumber: number, field: string) {
-    return uncertainByBoat[boatNumber]?.has(field) ? uncertainInputClass : inputClass;
+  function fieldClass(boatNumber: number, field: string, mono = false) {
+    const base = uncertainByBoat[boatNumber]?.has(field) ? uncertainInputClass : inputClass;
+    return mono ? `${base} font-mono` : base;
   }
 
   async function handleExtractImages(files: File[]) {
@@ -167,101 +169,108 @@ export function RaceEntriesPage() {
     }
   }
 
-  if (loading) return <p className="p-4 text-gray-500">読み込み中...</p>;
+  if (loading) return <p className="min-h-screen bg-navy-950 p-4 text-ink-400">読み込み中...</p>;
 
   return (
-    <div className="mx-auto max-w-3xl p-4">
-      <Link to="/races" className="text-sm text-gray-500 underline">
-        ← レース一覧へ戻る
-      </Link>
-      <h1 className="mt-2 mb-4 text-xl font-semibold text-gray-900 dark:text-gray-100">
-        出走表入力（事前情報）
-        {race && ` — ${race.venue} ${race.race_number}R (${race.race_date})`}
-      </h1>
+    <div className="min-h-screen bg-navy-950">
+      <div className="mx-auto max-w-6xl p-4">
+        <Link to="/races" className="text-sm text-ink-400 underline hover:text-ink-100">
+          ← レース一覧へ戻る
+        </Link>
+        <h1 className="mt-2 mb-4 font-heading text-xl font-bold text-ink-100">
+          出走表入力（事前情報）
+          {race && (
+            <span className="ml-2 font-mono text-base font-normal text-ink-400">
+              {race.venue} {race.race_number}R ({race.race_date})
+            </span>
+          )}
+        </h1>
 
-      <ImageExtractPanel onExtract={handleExtractImages} />
+        <ImageExtractPanel onExtract={handleExtractImages} />
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {rows.map((row, index) => (
-          <fieldset
-            key={row.boat_number}
-            className="rounded border border-gray-200 p-3 dark:border-gray-700"
-          >
-            <legend className="px-1 font-medium text-gray-900 dark:text-gray-100">
-              {row.boat_number}号艇
-            </legend>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-                選手名
-                <input
-                  required
-                  value={row.racer_name}
-                  onChange={(e) => updateRow(index, "racer_name", e.target.value)}
-                  className={fieldClass(row.boat_number, "racer_name")}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-                当地勝率
-                <input
-                  inputMode="decimal"
-                  value={row.local_win_rate}
-                  onChange={(e) => updateRow(index, "local_win_rate", e.target.value)}
-                  className={fieldClass(row.boat_number, "local_win_rate")}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-                全国勝率
-                <input
-                  inputMode="decimal"
-                  value={row.national_win_rate}
-                  onChange={(e) => updateRow(index, "national_win_rate", e.target.value)}
-                  className={fieldClass(row.boat_number, "national_win_rate")}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-                モーター勝率
-                <input
-                  inputMode="decimal"
-                  value={row.motor_win_rate}
-                  onChange={(e) => updateRow(index, "motor_win_rate", e.target.value)}
-                  className={fieldClass(row.boat_number, "motor_win_rate")}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-                フラグ（F/L等）
-                <input
-                  value={row.flag_status}
-                  onChange={(e) => updateRow(index, "flag_status", e.target.value)}
-                  className={fieldClass(row.boat_number, "flag_status")}
-                />
-              </label>
-            </div>
-          </fieldset>
-        ))}
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {savedMessage && (
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-green-600">{savedMessage}</p>
-            <Link
-              to={`/races/${raceIdNum}/pre-race`}
-              className="inline-block w-fit rounded bg-indigo-600 px-3 py-2 text-sm text-white"
-            >
-              → 直前情報入力へ
-            </Link>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="grid auto-cols-[82%] grid-flow-col gap-3 overflow-x-auto snap-x snap-mandatory pb-2 sm:auto-cols-fr sm:grid-flow-row sm:grid-cols-2 sm:overflow-visible md:grid-cols-3 xl:grid-cols-6">
+            {rows.map((row, index) => (
+              <div
+                key={row.boat_number}
+                className="flex snap-center flex-col gap-3 rounded-xl border border-navy-600 bg-navy-800 p-4 shadow-md shadow-black/20"
+              >
+                <div className="flex items-center gap-2">
+                  <BoatBadge boatNumber={row.boat_number} size="lg" />
+                  <span className="font-heading font-bold text-ink-100">{row.boat_number}号艇</span>
+                </div>
+                <label className="flex flex-col gap-1 text-sm text-ink-300">
+                  選手名
+                  <input
+                    required
+                    value={row.racer_name}
+                    onChange={(e) => updateRow(index, "racer_name", e.target.value)}
+                    className={fieldClass(row.boat_number, "racer_name")}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-ink-300">
+                  当地勝率
+                  <input
+                    inputMode="decimal"
+                    value={row.local_win_rate}
+                    onChange={(e) => updateRow(index, "local_win_rate", e.target.value)}
+                    className={fieldClass(row.boat_number, "local_win_rate", true)}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-ink-300">
+                  全国勝率
+                  <input
+                    inputMode="decimal"
+                    value={row.national_win_rate}
+                    onChange={(e) => updateRow(index, "national_win_rate", e.target.value)}
+                    className={fieldClass(row.boat_number, "national_win_rate", true)}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-ink-300">
+                  モーター勝率
+                  <input
+                    inputMode="decimal"
+                    value={row.motor_win_rate}
+                    onChange={(e) => updateRow(index, "motor_win_rate", e.target.value)}
+                    className={fieldClass(row.boat_number, "motor_win_rate", true)}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-ink-300">
+                  フラグ（F/L等）
+                  <input
+                    value={row.flag_status}
+                    onChange={(e) => updateRow(index, "flag_status", e.target.value)}
+                    className={fieldClass(row.boat_number, "flag_status")}
+                  />
+                </label>
+              </div>
+            ))}
           </div>
-        )}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded bg-indigo-600 px-3 py-2 text-white disabled:opacity-50"
-        >
-          {saving ? "保存中..." : "6艇まとめて保存"}
-        </button>
-      </form>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          {savedMessage && (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-green-400">{savedMessage}</p>
+              <Link
+                to={`/races/${raceIdNum}/pre-race`}
+                className="inline-block w-fit rounded-lg bg-accent-500 px-3 py-2 text-sm font-medium text-white hover:bg-accent-600"
+              >
+                → 直前情報入力へ
+              </Link>
+            </div>
+          )}
 
-      <PredictionPanel raceId={raceIdNum} stage="entry_confirmed" />
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-lg bg-accent-500 px-3 py-2 font-medium text-white shadow-lg shadow-accent-500/20 hover:bg-accent-600 disabled:opacity-50"
+          >
+            {saving ? "保存中..." : "6艇まとめて保存"}
+          </button>
+        </form>
+
+        <PredictionPanel raceId={raceIdNum} stage="entry_confirmed" />
+      </div>
     </div>
   );
 }

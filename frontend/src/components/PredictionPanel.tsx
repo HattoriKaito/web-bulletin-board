@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPrediction, listPredictions } from "../api/predictions";
 import type { Prediction, Stage } from "../types";
+import { BetCombinationBadges } from "./BetCombinationBadges";
 
 const STAGE_LABELS: Record<Stage, string> = {
   entry_confirmed: "出走表確定時点",
@@ -47,48 +48,47 @@ export function PredictionPanel({ raceId, stage }: { raceId: number; stage: Stag
   }
 
   return (
-    <div className="mt-6 rounded border border-indigo-200 p-4 dark:border-indigo-800">
+    <div className="mt-6 rounded-xl border border-navy-600 bg-navy-800 p-4 shadow-md shadow-black/20">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-medium text-gray-900 dark:text-gray-100">
-          AI予想（{STAGE_LABELS[stage]}）
-        </h2>
+        <h2 className="font-heading font-bold text-ink-100">AI予想（{STAGE_LABELS[stage]}）</h2>
         <button
           type="button"
           onClick={handleGenerate}
           disabled={generating}
-          className="w-fit flex-shrink-0 rounded bg-indigo-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+          className="w-fit flex-shrink-0 rounded-lg bg-accent-500 px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-accent-500/20 hover:bg-accent-600 disabled:opacity-50"
         >
           {generating ? "生成中..." : "AI予想を生成"}
         </button>
       </div>
 
-      {loadingHistory && <p className="text-sm text-gray-500">読み込み中...</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loadingHistory && <p className="text-sm text-ink-400">読み込み中...</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       {prediction && (
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2">
-            {prediction.suggested_bets.map((combo) => (
-              <span
-                key={combo}
-                className="rounded bg-indigo-50 px-2 py-1 font-mono text-sm text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-              >
-                {combo}
-              </span>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
+            {prediction.suggested_bets.map((combo, i) => (
+              <div key={combo} className="flex items-center gap-3">
+                <span className="w-5 flex-shrink-0 font-mono text-sm text-ink-400">{i + 1}.</span>
+                <BetCombinationBadges combination={combo} size={i === 0 ? "lg" : "md"} emphasized={i === 0} />
+                {i === 0 && (
+                  <span className="rounded-full bg-accent-500/20 px-2 py-0.5 text-xs font-medium text-accent-400">
+                    本命
+                  </span>
+                )}
+              </div>
             ))}
           </div>
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            {prediction.summary_reasoning}
-          </p>
+          <p className="text-sm text-ink-300">{prediction.summary_reasoning}</p>
           <button
             type="button"
             onClick={() => setShowDetail((v) => !v)}
-            className="w-fit text-sm text-indigo-600 underline"
+            className="w-fit text-sm text-accent-400 underline"
           >
             {showDetail ? "詳細を閉じる" : "もっと詳しく"}
           </button>
           {showDetail && (
-            <p className="whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+            <p className="whitespace-pre-wrap rounded-lg bg-navy-900 p-3 text-sm text-ink-300">
               {prediction.detailed_reasoning}
             </p>
           )}
@@ -96,7 +96,7 @@ export function PredictionPanel({ raceId, stage }: { raceId: number; stage: Stag
       )}
 
       {!loadingHistory && !prediction && !generating && (
-        <p className="text-sm text-gray-500">まだAI予想は生成されていません。</p>
+        <p className="text-sm text-ink-400">まだAI予想は生成されていません。</p>
       )}
     </div>
   );
