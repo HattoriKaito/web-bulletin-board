@@ -1,12 +1,12 @@
 import json
 from typing import Any
 
-import anthropic
 from pydantic import BaseModel, Field
 
 from app.core.combination import COMBINATION_PATTERN
 from app.core.config import settings
 from app.models import Odds, Race, RaceEntry, Rule
+from app.services.claude_client import get_client
 
 STAGE_ORDER = ["entry_confirmed", "pre_race", "final"]
 
@@ -16,27 +16,9 @@ _STAGE_LABELS = {
     "final": "締切直前（最終オッズ確定時点）",
 }
 
-_client: anthropic.Anthropic | None = None
-
 
 class AIGenerationError(Exception):
     pass
-
-
-def _get_client() -> anthropic.Anthropic:
-    """ANTHROPIC_API_KEY未設定でもアプリ起動自体は落ちないよう、
-    クライアントは初回呼び出し時に遅延生成する（モジュール読み込み時に
-    生成すると、キー未設定の開発環境でapp import自体が失敗してしまう）。
-
-    api_keyはsettings（pydantic-settings経由で.env/実環境変数の両方を読む）
-    から明示的に渡す。素の anthropic.Anthropic() はOSのos.environのみを見るため、
-    .envファイル経由で設定したキーが（os.environへは反映されないので）
-    無視されてしまう問題があった。
-    """
-    global _client
-    if _client is None:
-        _client = anthropic.Anthropic(api_key=settings.anthropic_api_key or None)
-    return _client
 
 
 class PredictionOutput(BaseModel):
@@ -162,7 +144,7 @@ def generate_prediction(
     last_error: Exception | None = None
     for _ in range(2):
         try:
-            response = _get_client().messages.parse(
+            response = get_client().messages.parse(
                 model=settings.claude_model,
                 max_tokens=4096,
                 thinking={"type": "adaptive"},

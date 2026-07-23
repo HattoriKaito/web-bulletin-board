@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
-import { getRace, listRaceEntries, upsertRaceEntries } from "../api/races";
+import { extractPreRaceFromImages, getRace, listRaceEntries, upsertRaceEntries } from "../api/races";
 import type { RaceEntryInput } from "../api/races";
 import type { Race, RaceEntry } from "../types";
 import { PredictionPanel } from "../components/PredictionPanel";
+import { ImageExtractPanel } from "../components/ImageExtractPanel";
 
 interface PreRaceFormRow {
   boat_number: number;
@@ -39,6 +40,8 @@ function toStringOrNull(value: string): string | null {
 
 const inputClass =
   "rounded border border-gray-300 px-2 py-1.5 text-base dark:border-gray-600 dark:bg-gray-800";
+const uncertainInputClass =
+  "rounded border border-amber-400 bg-amber-50 px-2 py-1.5 text-base dark:border-amber-600 dark:bg-amber-950";
 
 export function PreRaceInfoPage() {
   const { raceId } = useParams<{ raceId: string }>();
@@ -47,6 +50,7 @@ export function PreRaceInfoPage() {
   const [race, setRace] = useState<Race | null>(null);
   const [existingEntries, setExistingEntries] = useState<RaceEntry[]>([]);
   const [rows, setRows] = useState<PreRaceFormRow[]>([]);
+  const [uncertainByBoat, setUncertainByBoat] = useState<Record<number, Set<string>>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +75,48 @@ export function PreRaceInfoPage() {
 
   function updateRow(index: number, field: keyof PreRaceFormRow, value: string) {
     setRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+    const boatNumber = rows[index].boat_number;
+    setUncertainByBoat((prev) => {
+      const current = prev[boatNumber];
+      if (!current || !current.has(field)) return prev;
+      const next = new Set(current);
+      next.delete(field);
+      return { ...prev, [boatNumber]: next };
+    });
+  }
+
+  function fieldClass(boatNumber: number, field: string) {
+    return uncertainByBoat[boatNumber]?.has(field) ? uncertainInputClass : inputClass;
+  }
+
+  async function handleExtractImages(files: File[]) {
+    const result = await extractPreRaceFromImages(raceIdNum, files);
+    setRows((prev) =>
+      prev.map((row) => {
+        const extracted = result.boats.find((b) => b.boat_number === row.boat_number);
+        if (!extracted) return row;
+        return {
+          ...row,
+          entry_course:
+            extracted.entry_course != null ? String(extracted.entry_course) : row.entry_course,
+          exhibition_time:
+            extracted.exhibition_time != null
+              ? String(extracted.exhibition_time)
+              : row.exhibition_time,
+          weather_condition: extracted.weather_condition ?? row.weather_condition,
+          wind_direction: extracted.wind_direction ?? row.wind_direction,
+          wind_speed: extracted.wind_speed != null ? String(extracted.wind_speed) : row.wind_speed,
+        };
+      }),
+    );
+    setUncertainByBoat((prev) => {
+      const next = { ...prev };
+      for (const b of result.boats) {
+        next[b.boat_number] = new Set(b.uncertain_fields);
+      }
+      return next;
+    });
+    setSavedMessage(null);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -79,10 +125,10 @@ export function PreRaceInfoPage() {
     setSavedMessage(null);
     setSaving(true);
     try {
-      // race_entriesはboat_numberの他に選手名・勝率等も必須項目のため、
-      // 既存データ(existingEntries)に直前情報の入力値をマージしてPUTする。
-      // （PUT /races/{id}/entriesは全件置き換えのため、この画面で
-      // 触っていない項目を欠落させないための措置）
+      // race_entriesは事前情報（選手名・各種勝率等）も含めた1レコードのため、
+      // このフォームで扱わない項目は既存データ(existingEntries)から引き継いで
+      // PUTする（PUT /races/{id}/entriesは全件置き換えのため、ここで空を
+      // 送ると事前情報が消えてしまう）。
       const entries: RaceEntryInput[] = rows.map((row) => {
         const original = existingEntries.find((e) => e.boat_number === row.boat_number);
         return {
@@ -134,6 +180,8 @@ export function PreRaceInfoPage() {
         {race && ` — ${race.venue} ${race.race_number}R (${race.race_date})`}
       </h1>
 
+      <ImageExtractPanel onExtract={handleExtractImages} />
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {rows.map((row, index) => (
           <fieldset
@@ -152,7 +200,7 @@ export function PreRaceInfoPage() {
                   max={6}
                   value={row.entry_course}
                   onChange={(e) => updateRow(index, "entry_course", e.target.value)}
-                  className={inputClass}
+                  className={fieldClass(row.boat_number, "entry_course")}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
@@ -161,7 +209,7 @@ export function PreRaceInfoPage() {
                   inputMode="decimal"
                   value={row.exhibition_time}
                   onChange={(e) => updateRow(index, "exhibition_time", e.target.value)}
-                  className={inputClass}
+                  className={fieldClass(row.boat_number, "exhibition_time")}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
@@ -169,7 +217,7 @@ export function PreRaceInfoPage() {
                 <input
                   value={row.weather_condition}
                   onChange={(e) => updateRow(index, "weather_condition", e.target.value)}
-                  className={inputClass}
+                  className={fieldClass(row.boat_number, "weather_condition")}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
@@ -177,7 +225,7 @@ export function PreRaceInfoPage() {
                 <input
                   value={row.wind_direction}
                   onChange={(e) => updateRow(index, "wind_direction", e.target.value)}
-                  className={inputClass}
+                  className={fieldClass(row.boat_number, "wind_direction")}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
@@ -186,7 +234,7 @@ export function PreRaceInfoPage() {
                   inputMode="decimal"
                   value={row.wind_speed}
                   onChange={(e) => updateRow(index, "wind_speed", e.target.value)}
-                  className={inputClass}
+                  className={fieldClass(row.boat_number, "wind_speed")}
                 />
               </label>
             </div>

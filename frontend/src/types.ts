@@ -25,6 +25,34 @@ export interface RaceEntry {
 
 export type Stage = "entry_confirmed" | "pre_race" | "final";
 
+export interface ExtractedPreRegistrationEntry {
+  boat_number: number;
+  racer_name: string | null;
+  local_win_rate: number | null;
+  national_win_rate: number | null;
+  motor_win_rate: number | null;
+  flag_status: string | null;
+  uncertain_fields: string[];
+}
+
+export interface ExtractedPreRegistrationResult {
+  boats: ExtractedPreRegistrationEntry[];
+}
+
+export interface ExtractedPreRaceEntry {
+  boat_number: number;
+  entry_course: number | null;
+  exhibition_time: number | null;
+  weather_condition: string | null;
+  wind_direction: string | null;
+  wind_speed: number | null;
+  uncertain_fields: string[];
+}
+
+export interface ExtractedPreRaceResult {
+  boats: ExtractedPreRaceEntry[];
+}
+
 export interface Odds {
   id: number;
   race_id: number;

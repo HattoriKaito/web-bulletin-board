@@ -1,5 +1,12 @@
 import { apiFetch } from "./client";
-import type { Odds, Race, RaceEntry, Stage } from "../types";
+import type {
+  ExtractedPreRaceResult,
+  ExtractedPreRegistrationResult,
+  Odds,
+  Race,
+  RaceEntry,
+  Stage,
+} from "../types";
 
 export interface RaceCreateInput {
   venue: string;
@@ -53,6 +60,32 @@ export function upsertRaceEntries(
     method: "PUT",
     body: JSON.stringify({ entries }),
   });
+}
+
+function imagesToFormData(files: File[]): FormData {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+  return formData;
+}
+
+export function extractPreRegistrationFromImages(
+  raceId: number,
+  files: File[],
+): Promise<ExtractedPreRegistrationResult> {
+  return apiFetch<ExtractedPreRegistrationResult>(
+    `/races/${raceId}/entries/extract-pre-registration`,
+    { method: "POST", body: imagesToFormData(files) },
+  );
+}
+
+export function extractPreRaceFromImages(
+  raceId: number,
+  files: File[],
+): Promise<ExtractedPreRaceResult> {
+  return apiFetch<ExtractedPreRaceResult>(
+    `/races/${raceId}/entries/extract-pre-race`,
+    { method: "POST", body: imagesToFormData(files) },
+  );
 }
 
 export interface OddsEntryInput {

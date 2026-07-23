@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id, get_db
@@ -8,8 +8,20 @@ from app.schemas.odds import OddsBulkCreate, OddsRead, Stage
 from app.schemas.prediction import PredictionRead
 from app.schemas.race import RaceCreate, RaceRead, RaceUpdate
 from app.schemas.race_entry import RaceEntriesBulkUpsert, RaceEntryRead
+from app.schemas.race_entry_extraction import (
+    ExtractedPreRaceResult,
+    ExtractedPreRegistrationResult,
+)
 from app.schemas.result import ResultRead, ResultUpsert
 from app.services.ai_prediction import STAGE_ORDER, AIGenerationError, generate_prediction
+from app.services.entry_extraction import (
+    ALLOWED_IMAGE_TYPES,
+    MAX_IMAGE_BYTES,
+    MAX_IMAGES,
+    ExtractionError,
+    extract_pre_race,
+    extract_pre_registration,
+)
 from app.services.settlement import compute_bet_hits, ensure_ai_suggested_bets, summarize_group
 
 router = APIRouter(prefix="/races", tags=["races"])
@@ -114,6 +126,86 @@ def upsert_race_entries(
     db.flush()
     entries.sort(key=lambda e: e.boat_number)
     return entries
+
+
+def _read_images(files: list[UploadFile]) -> list[tuple[bytes, str]]:
+    """アップロードされた画像を検証しつつ読み込む。
+
+    同期defのエンドポイントから呼ぶため、await file.read()ではなく
+    file.file.read()（UploadFile内部のSpooledTemporaryFile）を使う。
+    """
+    if not files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="画像を1枚以上アップロードしてください"
+        )
+    if len(files) > MAX_IMAGES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"画像は{MAX_IMAGES}枚までです",
+        )
+    images: list[tuple[bytes, str]] = []
+    for f in files:
+        if f.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"対応していない画像形式です: {f.content_type}",
+            )
+        data = f.file.read()
+        if len(data) > MAX_IMAGE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="画像サイズが大きすぎます（1枚10MBまで）",
+            )
+        images.append((data, f.content_type))
+    return images
+
+
+@router.post(
+    "/{race_id}/entries/extract-pre-registration",
+    response_model=ExtractedPreRegistrationResult,
+)
+def extract_entries_pre_registration(
+    race_id: int,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+) -> ExtractedPreRegistrationResult:
+    """出走表の画像（複数可）から事前情報（選手名・各種勝率・フラグ）を抽出する。
+
+    抽出結果はDBに保存せず、フロント側でフォームにプリフィルするだけに使う。
+    実際の保存は従来通りPUT /races/{race_id}/entriesで、ユーザーが内容を
+    確認・修正した上で行う。
+    """
+    _get_owned_race(db, race_id)
+    images = _read_images(files)
+    try:
+        return extract_pre_registration(images)
+    except ExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        ) from exc
+
+
+@router.post(
+    "/{race_id}/entries/extract-pre-race",
+    response_model=ExtractedPreRaceResult,
+)
+def extract_entries_pre_race(
+    race_id: int,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+) -> ExtractedPreRaceResult:
+    """直前情報の画像（複数可）から進入コース・展示タイム・天候等を抽出する。
+
+    extract_entries_pre_registrationと同様、DBには保存しない。
+    """
+    _get_owned_race(db, race_id)
+    images = _read_images(files)
+    try:
+        return extract_pre_race(images)
+    except ExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        ) from exc
 
 
 @router.get("/{race_id}/odds", response_model=list[OddsRead])

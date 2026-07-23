@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
-import { getRace, listRaceEntries, upsertRaceEntries } from "../api/races";
+import { extractPreRegistrationFromImages, getRace, listRaceEntries, upsertRaceEntries } from "../api/races";
 import type { RaceEntryInput } from "../api/races";
-import type { Race } from "../types";
+import type { Race, RaceEntry } from "../types";
 import { PredictionPanel } from "../components/PredictionPanel";
+import { ImageExtractPanel } from "../components/ImageExtractPanel";
 
 interface EntryFormRow {
   boat_number: number;
@@ -12,11 +13,6 @@ interface EntryFormRow {
   national_win_rate: string;
   motor_win_rate: string;
   flag_status: string;
-  entry_course: string;
-  exhibition_time: string;
-  weather_condition: string;
-  wind_direction: string;
-  wind_speed: string;
 }
 
 function emptyRow(boatNumber: number): EntryFormRow {
@@ -27,11 +23,6 @@ function emptyRow(boatNumber: number): EntryFormRow {
     national_win_rate: "",
     motor_win_rate: "",
     flag_status: "",
-    entry_course: "",
-    exhibition_time: "",
-    weather_condition: "",
-    wind_direction: "",
-    wind_speed: "",
   };
 }
 
@@ -47,15 +38,19 @@ function toStringOrNull(value: string): string | null {
 
 const inputClass =
   "rounded border border-gray-300 px-2 py-1.5 text-base dark:border-gray-600 dark:bg-gray-800";
+const uncertainInputClass =
+  "rounded border border-amber-400 bg-amber-50 px-2 py-1.5 text-base dark:border-amber-600 dark:bg-amber-950";
 
 export function RaceEntriesPage() {
   const { raceId } = useParams<{ raceId: string }>();
   const raceIdNum = Number(raceId);
 
   const [race, setRace] = useState<Race | null>(null);
+  const [existingEntries, setExistingEntries] = useState<RaceEntry[]>([]);
   const [rows, setRows] = useState<EntryFormRow[]>(() =>
     Array.from({ length: 6 }, (_, i) => emptyRow(i + 1)),
   );
+  const [uncertainByBoat, setUncertainByBoat] = useState<Record<number, Set<string>>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,24 +62,18 @@ export function RaceEntriesPage() {
       .then(([raceData, entries]) => {
         if (cancelled) return;
         setRace(raceData);
-        if (entries.length > 0) {
+        const sorted = entries.slice().sort((a, b) => a.boat_number - b.boat_number);
+        setExistingEntries(sorted);
+        if (sorted.length > 0) {
           setRows(
-            entries
-              .slice()
-              .sort((a, b) => a.boat_number - b.boat_number)
-              .map((e) => ({
-                boat_number: e.boat_number,
-                racer_name: e.racer_name,
-                local_win_rate: e.local_win_rate?.toString() ?? "",
-                national_win_rate: e.national_win_rate?.toString() ?? "",
-                motor_win_rate: e.motor_win_rate?.toString() ?? "",
-                flag_status: e.flag_status ?? "",
-                entry_course: e.entry_course?.toString() ?? "",
-                exhibition_time: e.exhibition_time?.toString() ?? "",
-                weather_condition: e.weather_condition ?? "",
-                wind_direction: e.wind_direction ?? "",
-                wind_speed: e.wind_speed?.toString() ?? "",
-              })),
+            sorted.map((e) => ({
+              boat_number: e.boat_number,
+              racer_name: e.racer_name,
+              local_win_rate: e.local_win_rate?.toString() ?? "",
+              national_win_rate: e.national_win_rate?.toString() ?? "",
+              motor_win_rate: e.motor_win_rate?.toString() ?? "",
+              flag_status: e.flag_status ?? "",
+            })),
           );
         }
       })
@@ -97,6 +86,49 @@ export function RaceEntriesPage() {
 
   function updateRow(index: number, field: keyof EntryFormRow, value: string) {
     setRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+    const boatNumber = rows[index].boat_number;
+    setUncertainByBoat((prev) => {
+      const current = prev[boatNumber];
+      if (!current || !current.has(field)) return prev;
+      const next = new Set(current);
+      next.delete(field);
+      return { ...prev, [boatNumber]: next };
+    });
+  }
+
+  function fieldClass(boatNumber: number, field: string) {
+    return uncertainByBoat[boatNumber]?.has(field) ? uncertainInputClass : inputClass;
+  }
+
+  async function handleExtractImages(files: File[]) {
+    const result = await extractPreRegistrationFromImages(raceIdNum, files);
+    setRows((prev) =>
+      prev.map((row) => {
+        const extracted = result.boats.find((b) => b.boat_number === row.boat_number);
+        if (!extracted) return row;
+        return {
+          ...row,
+          racer_name: extracted.racer_name ?? row.racer_name,
+          local_win_rate:
+            extracted.local_win_rate != null ? String(extracted.local_win_rate) : row.local_win_rate,
+          national_win_rate:
+            extracted.national_win_rate != null
+              ? String(extracted.national_win_rate)
+              : row.national_win_rate,
+          motor_win_rate:
+            extracted.motor_win_rate != null ? String(extracted.motor_win_rate) : row.motor_win_rate,
+          flag_status: extracted.flag_status ?? row.flag_status,
+        };
+      }),
+    );
+    setUncertainByBoat((prev) => {
+      const next = { ...prev };
+      for (const b of result.boats) {
+        next[b.boat_number] = new Set(b.uncertain_fields);
+      }
+      return next;
+    });
+    setSavedMessage(null);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -105,20 +137,28 @@ export function RaceEntriesPage() {
     setSavedMessage(null);
     setSaving(true);
     try {
-      const entries: RaceEntryInput[] = rows.map((row) => ({
-        boat_number: row.boat_number,
-        racer_name: row.racer_name,
-        local_win_rate: toNumberOrNull(row.local_win_rate),
-        national_win_rate: toNumberOrNull(row.national_win_rate),
-        motor_win_rate: toNumberOrNull(row.motor_win_rate),
-        flag_status: toStringOrNull(row.flag_status),
-        entry_course: toNumberOrNull(row.entry_course),
-        exhibition_time: toNumberOrNull(row.exhibition_time),
-        weather_condition: toStringOrNull(row.weather_condition),
-        wind_direction: toStringOrNull(row.wind_direction),
-        wind_speed: toNumberOrNull(row.wind_speed),
-      }));
-      await upsertRaceEntries(raceIdNum, entries);
+      // race_entriesは直前情報（entry_course等）も含めた1レコードのため、
+      // このフォームで扱わない項目は既存データ(existingEntries)から引き継いで
+      // PUTする（PUT /races/{id}/entriesは全件置き換えのため、ここで空を
+      // 送ると直前情報が消えてしまう）。
+      const entries: RaceEntryInput[] = rows.map((row) => {
+        const original = existingEntries.find((e) => e.boat_number === row.boat_number);
+        return {
+          boat_number: row.boat_number,
+          racer_name: row.racer_name,
+          local_win_rate: toNumberOrNull(row.local_win_rate),
+          national_win_rate: toNumberOrNull(row.national_win_rate),
+          motor_win_rate: toNumberOrNull(row.motor_win_rate),
+          flag_status: toStringOrNull(row.flag_status),
+          entry_course: original?.entry_course ?? null,
+          exhibition_time: original?.exhibition_time ?? null,
+          weather_condition: original?.weather_condition ?? null,
+          wind_direction: original?.wind_direction ?? null,
+          wind_speed: original?.wind_speed ?? null,
+        };
+      });
+      const updated = await upsertRaceEntries(raceIdNum, entries);
+      setExistingEntries(updated.slice().sort((a, b) => a.boat_number - b.boat_number));
       setSavedMessage("出走表を保存しました。");
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
@@ -135,9 +175,11 @@ export function RaceEntriesPage() {
         ← レース一覧へ戻る
       </Link>
       <h1 className="mt-2 mb-4 text-xl font-semibold text-gray-900 dark:text-gray-100">
-        出走表入力
+        出走表入力（事前情報）
         {race && ` — ${race.venue} ${race.race_number}R (${race.race_date})`}
       </h1>
+
+      <ImageExtractPanel onExtract={handleExtractImages} />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {rows.map((row, index) => (
@@ -155,7 +197,7 @@ export function RaceEntriesPage() {
                   required
                   value={row.racer_name}
                   onChange={(e) => updateRow(index, "racer_name", e.target.value)}
-                  className={inputClass}
+                  className={fieldClass(row.boat_number, "racer_name")}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
@@ -164,7 +206,7 @@ export function RaceEntriesPage() {
                   inputMode="decimal"
                   value={row.local_win_rate}
                   onChange={(e) => updateRow(index, "local_win_rate", e.target.value)}
-                  className={inputClass}
+                  className={fieldClass(row.boat_number, "local_win_rate")}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
@@ -173,7 +215,7 @@ export function RaceEntriesPage() {
                   inputMode="decimal"
                   value={row.national_win_rate}
                   onChange={(e) => updateRow(index, "national_win_rate", e.target.value)}
-                  className={inputClass}
+                  className={fieldClass(row.boat_number, "national_win_rate")}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
@@ -182,7 +224,7 @@ export function RaceEntriesPage() {
                   inputMode="decimal"
                   value={row.motor_win_rate}
                   onChange={(e) => updateRow(index, "motor_win_rate", e.target.value)}
-                  className={inputClass}
+                  className={fieldClass(row.boat_number, "motor_win_rate")}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
@@ -190,52 +232,7 @@ export function RaceEntriesPage() {
                 <input
                   value={row.flag_status}
                   onChange={(e) => updateRow(index, "flag_status", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-                進入コース
-                <input
-                  type="number"
-                  min={1}
-                  max={6}
-                  value={row.entry_course}
-                  onChange={(e) => updateRow(index, "entry_course", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-                展示タイム
-                <input
-                  inputMode="decimal"
-                  value={row.exhibition_time}
-                  onChange={(e) => updateRow(index, "exhibition_time", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-                天候
-                <input
-                  value={row.weather_condition}
-                  onChange={(e) => updateRow(index, "weather_condition", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-                風向
-                <input
-                  value={row.wind_direction}
-                  onChange={(e) => updateRow(index, "wind_direction", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
-                風速
-                <input
-                  inputMode="decimal"
-                  value={row.wind_speed}
-                  onChange={(e) => updateRow(index, "wind_speed", e.target.value)}
-                  className={inputClass}
+                  className={fieldClass(row.boat_number, "flag_status")}
                 />
               </label>
             </div>
