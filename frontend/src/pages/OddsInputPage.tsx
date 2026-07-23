@@ -20,7 +20,7 @@ function emptyRow(): OddsFormRow {
 }
 
 const inputClass =
-  "rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800";
+  "rounded border border-gray-300 px-2 py-1.5 text-base dark:border-gray-600 dark:bg-gray-800";
 
 export function OddsInputPage() {
   const { raceId } = useParams<{ raceId: string }>();
@@ -119,25 +119,25 @@ export function OddsInputPage() {
 
         <div className="flex flex-col gap-2">
           {rows.map((row, index) => (
-            <div key={index} className="flex items-center gap-2">
+            <div key={index} className="flex flex-wrap items-center gap-2">
               <input
                 placeholder="組み合わせ（例：1-2-3）"
                 value={row.combination}
                 onChange={(e) => updateRow(index, "combination", e.target.value)}
-                className={`${inputClass} flex-1`}
+                className={`${inputClass} min-w-0 flex-1 basis-32`}
               />
               <input
                 placeholder="オッズ"
                 inputMode="decimal"
                 value={row.odds_value}
                 onChange={(e) => updateRow(index, "odds_value", e.target.value)}
-                className={`${inputClass} w-24`}
+                className={`${inputClass} w-20 flex-1 sm:flex-none`}
               />
               <button
                 type="button"
                 onClick={() => removeRow(index)}
                 disabled={rows.length === 1}
-                className="text-sm text-gray-400 disabled:opacity-30"
+                className="px-2 py-1.5 text-sm text-gray-400 disabled:opacity-30"
               >
                 削除
               </button>

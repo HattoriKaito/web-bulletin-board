@@ -83,14 +83,14 @@ export function SummaryPage() {
                 >
                   <Link
                     to={`/races/${item.race_id}/results`}
-                    className="flex items-center justify-between"
+                    className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <span className="font-medium text-gray-900 dark:text-gray-100">
                       {item.venue} {item.race_number}R
                     </span>
                     <span className="text-sm text-gray-500">{item.race_date}</span>
                   </Link>
-                  <div className="mt-2 flex justify-between text-sm">
+                  <div className="mt-2 flex flex-col gap-1 text-sm sm:flex-row sm:justify-between">
                     <span className="text-gray-500">
                       実際: <NetAmount value={item.actual_summary.net_profit} />
                     </span>

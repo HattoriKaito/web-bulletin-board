@@ -19,9 +19,9 @@ export function RaceListPage() {
 
   return (
     <div className="mx-auto max-w-2xl p-4">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">レース一覧</h1>
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           <Link to="/summary" className="text-gray-500 underline">
             収支サマリー
           </Link>
@@ -62,20 +62,35 @@ export function RaceListPage() {
                 {race.race_date} ・ {race.race_type}
               </span>
             </Link>
-            <div className="mt-2 flex gap-3 text-xs">
-              <Link to={`/races/${race.id}/entries`} className="text-indigo-600 underline">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              <Link
+                to={`/races/${race.id}/entries`}
+                className="py-1 text-indigo-600 underline dark:text-indigo-400"
+              >
                 出走表
               </Link>
-              <Link to={`/races/${race.id}/pre-race`} className="text-indigo-600 underline">
+              <Link
+                to={`/races/${race.id}/pre-race`}
+                className="py-1 text-indigo-600 underline dark:text-indigo-400"
+              >
                 直前情報
               </Link>
-              <Link to={`/races/${race.id}/odds`} className="text-indigo-600 underline">
+              <Link
+                to={`/races/${race.id}/odds`}
+                className="py-1 text-indigo-600 underline dark:text-indigo-400"
+              >
                 オッズ
               </Link>
-              <Link to={`/races/${race.id}/bets`} className="text-indigo-600 underline">
+              <Link
+                to={`/races/${race.id}/bets`}
+                className="py-1 text-indigo-600 underline dark:text-indigo-400"
+              >
                 買い目
               </Link>
-              <Link to={`/races/${race.id}/results`} className="text-indigo-600 underline">
+              <Link
+                to={`/races/${race.id}/results`}
+                className="py-1 text-indigo-600 underline dark:text-indigo-400"
+              >
                 結果
               </Link>
             </div>

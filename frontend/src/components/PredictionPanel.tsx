@@ -48,7 +48,7 @@ export function PredictionPanel({ raceId, stage }: { raceId: number; stage: Stag
 
   return (
     <div className="mt-6 rounded border border-indigo-200 p-4 dark:border-indigo-800">
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-medium text-gray-900 dark:text-gray-100">
           AI予想（{STAGE_LABELS[stage]}）
         </h2>
@@ -56,7 +56,7 @@ export function PredictionPanel({ raceId, stage }: { raceId: number; stage: Stag
           type="button"
           onClick={handleGenerate}
           disabled={generating}
-          className="flex-shrink-0 rounded bg-indigo-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+          className="w-fit flex-shrink-0 rounded bg-indigo-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
         >
           {generating ? "生成中..." : "AI予想を生成"}
         </button>

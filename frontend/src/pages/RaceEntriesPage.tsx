@@ -46,7 +46,7 @@ function toStringOrNull(value: string): string | null {
 }
 
 const inputClass =
-  "rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800";
+  "rounded border border-gray-300 px-2 py-1.5 text-base dark:border-gray-600 dark:bg-gray-800";
 
 export function RaceEntriesPage() {
   const { raceId } = useParams<{ raceId: string }>();
@@ -148,8 +148,8 @@ export function RaceEntriesPage() {
             <legend className="px-1 font-medium text-gray-900 dark:text-gray-100">
               {row.boat_number}号艇
             </legend>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                 選手名
                 <input
                   required
@@ -158,7 +158,7 @@ export function RaceEntriesPage() {
                   className={inputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
+              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                 当地勝率
                 <input
                   inputMode="decimal"
@@ -167,7 +167,7 @@ export function RaceEntriesPage() {
                   className={inputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
+              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                 全国勝率
                 <input
                   inputMode="decimal"
@@ -176,7 +176,7 @@ export function RaceEntriesPage() {
                   className={inputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
+              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                 モーター勝率
                 <input
                   inputMode="decimal"
@@ -185,7 +185,7 @@ export function RaceEntriesPage() {
                   className={inputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
+              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                 フラグ（F/L等）
                 <input
                   value={row.flag_status}
@@ -193,7 +193,7 @@ export function RaceEntriesPage() {
                   className={inputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
+              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                 進入コース
                 <input
                   type="number"
@@ -204,7 +204,7 @@ export function RaceEntriesPage() {
                   className={inputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
+              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                 展示タイム
                 <input
                   inputMode="decimal"
@@ -213,7 +213,7 @@ export function RaceEntriesPage() {
                   className={inputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
+              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                 天候
                 <input
                   value={row.weather_condition}
@@ -221,7 +221,7 @@ export function RaceEntriesPage() {
                   className={inputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
+              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                 風向
                 <input
                   value={row.wind_direction}
@@ -229,7 +229,7 @@ export function RaceEntriesPage() {
                   className={inputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300">
+              <label className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                 風速
                 <input
                   inputMode="decimal"

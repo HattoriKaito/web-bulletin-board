@@ -15,7 +15,7 @@ function emptyRow(): BetFormRow {
 }
 
 const inputClass =
-  "rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800";
+  "rounded border border-gray-300 px-2 py-1.5 text-base dark:border-gray-600 dark:bg-gray-800";
 
 export function BetsPage() {
   const { raceId } = useParams<{ raceId: string }>();
