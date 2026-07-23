@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: boatai-backend
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+
+      # ランタイム接続（app_user、NOBYPASSRLS）
+      - key: DB_USER
+        value: app_user
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        value: postgres
+      - key: DB_SSLMODE
+        value: require
+
+      # マイグレーション専用接続（Supabaseのデフォルトpostgresロール）
+      - key: MIGRATION_DB_USER
+        value: postgres
+      - key: MIGRATION_DB_PASSWORD
+        sync: false
+      - key: MIGRATION_DB_HOST
+        sync: false
+      - key: MIGRATION_DB_PORT
+        value: "5432"
+      - key: MIGRATION_DB_NAME
+        value: postgres
+
+      # JWT
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRE_MINUTES
+        value: "60"
+
+      # CORS（Vercel本番Originを設定する。初回デプロイでVercelのURLが
+      # 確定してから値を入力すること）
+      - key: FRONTEND_ORIGIN
+        sync: false
+
+      # Claude API
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CLAUDE_MODEL
+        value: claude-opus-4-8
