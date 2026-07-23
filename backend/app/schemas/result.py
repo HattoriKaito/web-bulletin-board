@@ -24,6 +24,14 @@ class BetHitInfo(BaseModel):
     amount: int
     is_ai_suggested: bool
     is_hit: bool
+    winnings: int
+    net: int
+
+
+class BetGroupSummary(BaseModel):
+    total_bet_amount: int
+    total_winnings: int
+    net_profit: int
 
 
 class ResultRead(BaseModel):
@@ -33,3 +41,5 @@ class ResultRead(BaseModel):
     payout_amount: int
     created_at: datetime
     bet_results: list[BetHitInfo]
+    actual_summary: BetGroupSummary
+    ai_suggested_summary: BetGroupSummary

@@ -73,6 +73,14 @@ export interface BetHitInfo {
   amount: number;
   is_ai_suggested: boolean;
   is_hit: boolean;
+  winnings: number;
+  net: number;
+}
+
+export interface BetGroupSummary {
+  total_bet_amount: number;
+  total_winnings: number;
+  net_profit: number;
 }
 
 export interface RaceResult {
@@ -82,4 +90,21 @@ export interface RaceResult {
   payout_amount: number;
   created_at: string;
   bet_results: BetHitInfo[];
+  actual_summary: BetGroupSummary;
+  ai_suggested_summary: BetGroupSummary;
+}
+
+export interface RaceSummaryItem {
+  race_id: number;
+  venue: string;
+  race_number: number;
+  race_date: string;
+  actual_summary: BetGroupSummary;
+  ai_suggested_summary: BetGroupSummary;
+}
+
+export interface OverallSummary {
+  races: RaceSummaryItem[];
+  actual_total: BetGroupSummary;
+  ai_suggested_total: BetGroupSummary;
 }

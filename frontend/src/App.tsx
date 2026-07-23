@@ -10,6 +10,7 @@ import { RaceFormPage } from "./pages/RaceFormPage";
 import { RaceListPage } from "./pages/RaceListPage";
 import { ResultsPage } from "./pages/ResultsPage";
 import { RulesPage } from "./pages/RulesPage";
+import { SummaryPage } from "./pages/SummaryPage";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             <Route path="/races/:raceId/bets" element={<BetsPage />} />
             <Route path="/races/:raceId/results" element={<ResultsPage />} />
             <Route path="/rules" element={<RulesPage />} />
+            <Route path="/summary" element={<SummaryPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/races" replace />} />
         </Routes>

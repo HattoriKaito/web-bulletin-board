@@ -7,7 +7,9 @@ from app.core.combination import validate_combination
 
 class BetEntryInput(BaseModel):
     combination: str
-    amount: int = Field(gt=0)
+    # 舟券は100円単位で購入するため、収支計算（payout_amountは100円あたりの
+    # 払戻額として記録される）が正しく機能するよう100円単位に限定する。
+    amount: int = Field(gt=0, multiple_of=100)
 
     @field_validator("combination")
     @classmethod

@@ -2,12 +2,41 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getResult, upsertResult } from "../api/results";
 import { getRace } from "../api/races";
-import type { BetHitInfo, Race, RaceResult } from "../types";
+import type { BetGroupSummary, BetHitInfo, Race, RaceResult } from "../types";
 
-function HitList({ title, items }: { title: string; items: BetHitInfo[] }) {
+function NetAmount({ value }: { value: number }) {
+  const sign = value > 0 ? "+" : "";
+  const color =
+    value > 0
+      ? "text-green-600 dark:text-green-400"
+      : value < 0
+        ? "text-red-600 dark:text-red-400"
+        : "text-gray-500";
+  return (
+    <span className={`font-semibold ${color}`}>
+      {sign}
+      {value.toLocaleString()}円
+    </span>
+  );
+}
+
+function HitList({
+  title,
+  items,
+  summary,
+}: {
+  title: string;
+  items: BetHitInfo[];
+  summary: BetGroupSummary;
+}) {
   return (
     <div>
-      <h2 className="mb-2 font-medium text-gray-900 dark:text-gray-100">{title}</h2>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="font-medium text-gray-900 dark:text-gray-100">{title}</h2>
+        <span className="text-sm text-gray-500">
+          収支: <NetAmount value={summary.net_profit} />
+        </span>
+      </div>
       {items.length === 0 ? (
         <p className="text-sm text-gray-500">記録がありません。</p>
       ) : (
@@ -23,7 +52,7 @@ function HitList({ title, items }: { title: string; items: BetHitInfo[] }) {
             >
               <span className="font-mono">{b.combination}</span>
               <span>{b.amount}円</span>
-              <span>{b.is_hit ? "🎯 的中" : "-"}</span>
+              <span>{b.is_hit ? `🎯 +${b.winnings.toLocaleString()}円` : "-"}</span>
             </li>
           ))}
         </ul>
@@ -126,8 +155,8 @@ export function ResultsPage() {
 
       {result && (
         <div className="mt-6 flex flex-col gap-4">
-          <HitList title="実際の買い目" items={actualHits} />
-          <HitList title="AI提案の買い目" items={aiHits} />
+          <HitList title="実際の買い目" items={actualHits} summary={result.actual_summary} />
+          <HitList title="AI提案の買い目" items={aiHits} summary={result.ai_suggested_summary} />
         </div>
       )}
     </div>
