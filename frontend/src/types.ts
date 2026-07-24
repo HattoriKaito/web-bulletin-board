@@ -70,6 +70,12 @@ export interface Rule {
   created_at: string;
 }
 
+export interface RuleStats {
+  rule_id: number;
+  applied_count: number;
+  hit_count: number;
+}
+
 export interface Prediction {
   id: number;
   race_id: number;
@@ -135,4 +141,11 @@ export interface OverallSummary {
   races: RaceSummaryItem[];
   actual_total: BetGroupSummary;
   ai_suggested_total: BetGroupSummary;
+}
+
+export interface RaceTypeStats {
+  race_type: string;
+  total_races: number;
+  hit_count: number;
+  hit_rate: number;
 }

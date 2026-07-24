@@ -18,3 +18,10 @@ class OverallSummary(BaseModel):
     races: list[RaceSummaryItem]
     actual_total: BetGroupSummary
     ai_suggested_total: BetGroupSummary
+
+
+class RaceTypeStats(BaseModel):
+    race_type: str
+    total_races: int
+    hit_count: int
+    hit_rate: float

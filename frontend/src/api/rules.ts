@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { Rule } from "../types";
+import type { Rule, RuleStats } from "../types";
 
 export interface RuleCreateInput {
   rule_text: string;
@@ -33,4 +33,8 @@ export function updateRule(ruleId: number, input: RuleUpdateInput): Promise<Rule
 
 export function deleteRule(ruleId: number): Promise<void> {
   return apiFetch<void>(`/rules/${ruleId}`, { method: "DELETE" });
+}
+
+export function getRuleStats(ruleId: number): Promise<RuleStats> {
+  return apiFetch<RuleStats>(`/rules/${ruleId}/stats`);
 }

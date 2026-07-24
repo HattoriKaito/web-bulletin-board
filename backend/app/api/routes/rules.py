@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id, get_db
 from app.models import Rule
-from app.schemas.rule import RuleCreate, RuleRead, RuleUpdate
+from app.schemas.rule import RuleCreate, RuleRead, RuleStats, RuleUpdate
+from app.services.analytics import compute_rule_stats
 
 router = APIRouter(prefix="/rules", tags=["rules"])
 
@@ -61,3 +62,9 @@ def delete_rule(rule_id: int, db: Session = Depends(get_db)) -> None:
     rule = _get_owned_rule(db, rule_id)
     db.delete(rule)
     db.flush()
+
+
+@router.get("/{rule_id}/stats", response_model=RuleStats)
+def get_rule_stats(rule_id: int, db: Session = Depends(get_db)) -> RuleStats:
+    _get_owned_rule(db, rule_id)
+    return compute_rule_stats(db, rule_id)

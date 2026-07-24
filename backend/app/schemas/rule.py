@@ -23,3 +23,9 @@ class RuleRead(BaseModel):
     category: str | None
     is_active: bool
     created_at: datetime
+
+
+class RuleStats(BaseModel):
+    rule_id: int
+    applied_count: int
+    hit_count: int

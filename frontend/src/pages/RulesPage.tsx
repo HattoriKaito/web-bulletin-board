@@ -1,13 +1,27 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { createRule, deleteRule, listRules, updateRule } from "../api/rules";
-import type { Rule } from "../types";
+import { createRule, deleteRule, getRuleStats, listRules, updateRule } from "../api/rules";
+import type { Rule, RuleStats } from "../types";
 
 const inputClass =
   "rounded-lg border border-navy-500 bg-navy-900 px-2 py-1.5 text-base text-ink-100 placeholder:text-ink-400 focus:border-accent-400 focus:outline-none";
 
+function RuleStatsBadge({ stats }: { stats: RuleStats | undefined }) {
+  if (!stats) return null;
+  if (stats.applied_count === 0) {
+    return <span className="text-xs text-ink-400">まだ適用実績がありません</span>;
+  }
+  const rate = Math.round((stats.hit_count / stats.applied_count) * 100);
+  return (
+    <span className="font-mono text-xs text-ink-300">
+      適用{stats.applied_count}回中、的中{stats.hit_count}回（{rate}%）
+    </span>
+  );
+}
+
 export function RulesPage() {
   const [rules, setRules] = useState<Rule[]>([]);
+  const [statsByRule, setStatsByRule] = useState<Record<number, RuleStats>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +49,22 @@ export function RulesPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "取得に失敗しました"))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (rules.length === 0) return;
+    let cancelled = false;
+    Promise.all(rules.map((r) => getRuleStats(r.id).then((s) => [r.id, s] as const)))
+      .then((entries) => {
+        if (cancelled) return;
+        setStatsByRule(Object.fromEntries(entries));
+      })
+      .catch(() => {
+        // 成績集計の取得失敗はルール管理自体の機能を止めるほどではないため無視する
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rules]);
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -207,11 +237,14 @@ export function RulesPage() {
                     <p className={rule.is_active ? "text-ink-100" : "text-ink-400 line-through"}>
                       {rule.rule_text}
                     </p>
-                    {rule.category && (
-                      <span className="mt-1 inline-block rounded-full bg-navy-700 px-2 py-0.5 text-xs text-ink-300">
-                        {rule.category}
-                      </span>
-                    )}
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      {rule.category && (
+                        <span className="inline-block rounded-full bg-navy-700 px-2 py-0.5 text-xs text-ink-300">
+                          {rule.category}
+                        </span>
+                      )}
+                      <RuleStatsBadge stats={statsByRule[rule.id]} />
+                    </div>
                   </div>
                   <div className="flex flex-shrink-0 flex-col items-end gap-2">
                     <label className="flex items-center gap-1 text-xs text-ink-300">

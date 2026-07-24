@@ -4,10 +4,16 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.models import Bet, Race, Result
 from app.schemas.result import BetGroupSummary
-from app.schemas.summary import OverallSummary, RaceSummaryItem
+from app.schemas.summary import OverallSummary, RaceSummaryItem, RaceTypeStats
+from app.services.analytics import compute_race_type_stats
 from app.services.settlement import compute_bet_hits, summarize_group
 
 router = APIRouter(prefix="/summary", tags=["summary"])
+
+
+@router.get("/by-race-type", response_model=list[RaceTypeStats])
+def get_summary_by_race_type(db: Session = Depends(get_db)) -> list[RaceTypeStats]:
+    return compute_race_type_stats(db)
 
 
 @router.get("", response_model=OverallSummary)

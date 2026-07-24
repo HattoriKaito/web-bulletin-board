@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getSummary } from "../api/summary";
-import type { BetGroupSummary, OverallSummary } from "../types";
+import { getSummary, getSummaryByRaceType } from "../api/summary";
+import type { BetGroupSummary, OverallSummary, RaceTypeStats } from "../types";
 
 function NetAmount({ value }: { value: number }) {
   const sign = value > 0 ? "+" : "";
@@ -36,14 +36,43 @@ function TotalCard({ title, summary }: { title: string; summary: BetGroupSummary
   );
 }
 
+function RaceTypeStatsCard({ stats }: { stats: RaceTypeStats[] }) {
+  if (stats.length === 0) return null;
+  return (
+    <div className="mb-6 rounded-xl border border-navy-600 bg-navy-800 p-4 shadow-md shadow-black/20">
+      <h2 className="mb-3 font-heading font-bold text-ink-100">レース種別ごとのAI的中率</h2>
+      <ul className="flex flex-col gap-2">
+        {stats.map((s) => (
+          <li key={s.race_type} className="flex items-center gap-3 text-sm">
+            <span className="w-16 flex-shrink-0 text-ink-100">{s.race_type}</span>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-navy-700">
+              <div
+                className="h-full rounded-full bg-accent-500"
+                style={{ width: `${Math.round(s.hit_rate * 100)}%` }}
+              />
+            </div>
+            <span className="w-32 flex-shrink-0 text-right font-mono text-ink-300">
+              {s.hit_count}/{s.total_races}件（{Math.round(s.hit_rate * 100)}%）
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function SummaryPage() {
   const [summary, setSummary] = useState<OverallSummary | null>(null);
+  const [raceTypeStats, setRaceTypeStats] = useState<RaceTypeStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getSummary()
-      .then(setSummary)
+    Promise.all([getSummary(), getSummaryByRaceType()])
+      .then(([summaryData, raceTypeData]) => {
+        setSummary(summaryData);
+        setRaceTypeStats(raceTypeData);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : "取得に失敗しました"))
       .finally(() => setLoading(false));
   }, []);
@@ -65,6 +94,8 @@ export function SummaryPage() {
               <TotalCard title="実際の買い目（累計）" summary={summary.actual_total} />
               <TotalCard title="AI提案通りに買った場合（累計）" summary={summary.ai_suggested_total} />
             </div>
+
+            <RaceTypeStatsCard stats={raceTypeStats} />
 
             {summary.races.length === 0 ? (
               <p className="text-ink-400">結果が記録されているレースがまだありません。</p>
