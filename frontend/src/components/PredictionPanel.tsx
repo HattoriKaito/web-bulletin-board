@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
-import { createPrediction, listPredictions } from "../api/predictions";
-import type { Prediction, Stage } from "../types";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  createPrediction,
+  listPredictionChat,
+  listPredictions,
+  sendPredictionChatMessage,
+} from "../api/predictions";
+import type { Prediction, PredictionChatMessage, Stage } from "../types";
 import { BetCombinationBadges } from "./BetCombinationBadges";
 
 const STAGE_LABELS: Record<Stage, string> = {
@@ -8,6 +13,110 @@ const STAGE_LABELS: Record<Stage, string> = {
   pre_race: "直前情報時点",
   final: "締切直前（最終）",
 };
+
+function PredictionChatBox({ predictionId }: { predictionId: number }) {
+  const [messages, setMessages] = useState<PredictionChatMessage[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 新しいメッセージが増えるたびに一番下（最新）までスクロールする
+  // （max-h付きのスクロール領域なので、無いと新着が見えないまま隠れてしまう）。
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages, sending]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingHistory(true);
+    listPredictionChat(predictionId)
+      .then((data) => {
+        if (!cancelled) setMessages(data);
+      })
+      .catch(() => {
+        // 履歴取得の失敗は致命的ではないため無視し、新規送信自体はできる状態にしておく
+      })
+      .finally(() => !cancelled && setLoadingHistory(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [predictionId]);
+
+  async function handleSend(e: FormEvent) {
+    e.preventDefault();
+    const messageText = input.trim();
+    if (messageText === "") return;
+    setError(null);
+    setSending(true);
+    setInput("");
+    try {
+      const reply = await sendPredictionChatMessage(predictionId, messageText);
+      setMessages((prev) => [...prev, reply.user_message, reply.assistant_message]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "送信に失敗しました");
+      setInput(messageText); // 失敗時は入力内容を復元し、打ち直しを不要にする
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-navy-600 bg-navy-900 p-3">
+      <h3 className="text-sm font-medium text-ink-300">この予想について聞く</h3>
+
+      {loadingHistory ? (
+        <p className="text-sm text-ink-400">読み込み中...</p>
+      ) : (
+        <div ref={scrollRef} className="flex max-h-80 flex-col gap-2 overflow-y-auto scroll-smooth">
+          {messages.length === 0 && (
+            <p className="text-sm text-ink-400">
+              気になる点を質問してみましょう（例：「1号艇を本命にした理由は？」）。
+            </p>
+          )}
+          {messages.map((m) => (
+            <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <p
+                className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
+                  m.role === "user" ? "bg-accent-500 text-white" : "bg-navy-700 text-ink-100"
+                }`}
+              >
+                {m.content}
+              </p>
+            </div>
+          ))}
+          {sending && (
+            <div className="flex justify-start">
+              <p className="max-w-[85%] rounded-2xl bg-navy-700 px-3 py-2 text-sm text-ink-400">
+                考え中...
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
+      <form onSubmit={handleSend} className="flex gap-2">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="質問を入力..."
+          disabled={sending}
+          className="min-w-0 flex-1 rounded-lg border border-navy-500 bg-navy-800 px-3 py-1.5 text-sm text-ink-100 placeholder:text-ink-400 focus:border-accent-400 focus:outline-none disabled:opacity-50"
+        />
+        <button
+          type="submit"
+          disabled={sending || input.trim() === ""}
+          className="flex-shrink-0 rounded-lg bg-accent-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-600 disabled:opacity-50"
+        >
+          {sending ? "送信中..." : "送信"}
+        </button>
+      </form>
+    </div>
+  );
+}
 
 export function PredictionPanel({ raceId, stage }: { raceId: number; stage: Stage }) {
   const [prediction, setPrediction] = useState<Prediction | null>(null);
@@ -88,9 +197,12 @@ export function PredictionPanel({ raceId, stage }: { raceId: number; stage: Stag
             {showDetail ? "詳細を閉じる" : "もっと詳しく"}
           </button>
           {showDetail && (
-            <p className="whitespace-pre-wrap rounded-lg bg-navy-900 p-3 text-sm text-ink-300">
-              {prediction.detailed_reasoning}
-            </p>
+            <>
+              <p className="whitespace-pre-wrap rounded-lg bg-navy-900 p-3 text-sm text-ink-300">
+                {prediction.detailed_reasoning}
+              </p>
+              <PredictionChatBox predictionId={prediction.id} />
+            </>
           )}
         </div>
       )}

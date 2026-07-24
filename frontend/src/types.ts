@@ -86,6 +86,19 @@ export interface Prediction {
   created_at: string;
 }
 
+export interface PredictionChatMessage {
+  id: number;
+  prediction_id: number;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+}
+
+export interface PredictionChatReply {
+  user_message: PredictionChatMessage;
+  assistant_message: PredictionChatMessage;
+}
+
 export interface Bet {
   id: number;
   race_id: number;
