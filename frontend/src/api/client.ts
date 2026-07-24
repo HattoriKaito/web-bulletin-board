@@ -9,6 +9,24 @@ export class ApiError extends Error {
   }
 }
 
+// FastAPI/Pydanticのバリデーションエラー（422）は detail が
+// [{msg, loc, ...}, ...] という配列で返る。そのままJSON.stringifyすると
+// 画面に生のJSONが表示されてしまうため、msgだけを取り出して読める文にする。
+function extractErrorMessage(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) =>
+        item && typeof item === "object" && "msg" in item
+          ? String((item as { msg: unknown }).msg)
+          : null,
+      )
+      .filter((m): m is string => m !== null);
+    if (messages.length > 0) return messages.join(" / ");
+  }
+  return JSON.stringify(detail);
+}
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -43,7 +61,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     } catch {
       // レスポンスボディがJSONでない場合はstatusTextのまま
     }
-    throw new ApiError(res.status, typeof detail === "string" ? detail : JSON.stringify(detail));
+    throw new ApiError(res.status, extractErrorMessage(detail));
   }
 
   if (res.status === 204) {

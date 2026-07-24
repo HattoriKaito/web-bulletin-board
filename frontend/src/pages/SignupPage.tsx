@@ -2,9 +2,13 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
-export function LoginPage() {
-  const { login } = useAuth();
+const inputClass =
+  "rounded-lg border border-navy-500 bg-navy-900 px-3 py-2 text-ink-100 focus:border-accent-400 focus:outline-none";
+
+export function SignupPage() {
+  const { signup } = useAuth();
   const navigate = useNavigate();
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -15,10 +19,10 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password);
+      await signup(email, password, displayName);
       navigate("/races");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ログインに失敗しました");
+      setError(err instanceof Error ? err.message : "登録に失敗しました");
     } finally {
       setSubmitting(false);
     }
@@ -33,13 +37,23 @@ export function LoginPage() {
           className="flex flex-col gap-3 rounded-xl border border-navy-600 bg-navy-800 p-4 shadow-md shadow-black/20"
         >
           <label className="flex flex-col gap-1 text-sm text-ink-300">
+            表示名
+            <input
+              required
+              maxLength={100}
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-ink-300">
             メールアドレス
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-lg border border-navy-500 bg-navy-900 px-3 py-2 text-ink-100 focus:border-accent-400 focus:outline-none"
+              className={inputClass}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-ink-300">
@@ -47,10 +61,12 @@ export function LoginPage() {
             <input
               type="password"
               required
+              minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-lg border border-navy-500 bg-navy-900 px-3 py-2 text-ink-100 focus:border-accent-400 focus:outline-none"
+              className={inputClass}
             />
+            <span className="text-xs text-ink-400">8文字以上で入力してください</span>
           </label>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button
@@ -58,13 +74,13 @@ export function LoginPage() {
             disabled={submitting}
             className="rounded-lg bg-accent-500 px-3 py-2 font-medium text-white shadow-lg shadow-accent-500/20 hover:bg-accent-600 disabled:opacity-50"
           >
-            {submitting ? "ログイン中..." : "ログイン"}
+            {submitting ? "登録中..." : "新規登録"}
           </button>
         </form>
         <p className="text-center text-sm text-ink-400">
-          アカウントをお持ちでない方は{" "}
-          <Link to="/signup" className="text-accent-400 underline">
-            新規登録はこちら
+          すでにアカウントをお持ちの方は{" "}
+          <Link to="/login" className="text-accent-400 underline">
+            ログインはこちら
           </Link>
         </p>
       </div>

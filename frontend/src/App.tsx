@@ -10,6 +10,7 @@ import { RaceFormPage } from "./pages/RaceFormPage";
 import { RaceListPage } from "./pages/RaceListPage";
 import { ResultsPage } from "./pages/ResultsPage";
 import { RulesPage } from "./pages/RulesPage";
+import { SignupPage } from "./pages/SignupPage";
 import { SummaryPage } from "./pages/SummaryPage";
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/races" element={<RaceListPage />} />
             <Route path="/races/new" element={<RaceFormPage />} />
