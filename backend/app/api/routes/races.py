@@ -5,6 +5,7 @@ from app.api.deps import get_current_user_id, get_db
 from app.models import Bet, Odds, Prediction, Race, RaceEntry, Result, Rule
 from app.schemas.bet import BetRead, BetsConfirmInput, BetsConfirmResult
 from app.schemas.odds import OddsBulkCreate, OddsRead, Stage
+from app.schemas.odds_extraction import ExtractedOddsResult
 from app.schemas.prediction import PredictionRead
 from app.schemas.race import RaceCreate, RaceRead, RaceUpdate
 from app.schemas.race_entry import RaceEntriesBulkUpsert, RaceEntryRead
@@ -22,6 +23,7 @@ from app.services.entry_extraction import (
     extract_pre_race,
     extract_pre_registration,
 )
+from app.services.odds_extraction import OddsExtractionError, extract_odds
 from app.services.settlement import compute_bet_hits, ensure_ai_suggested_bets, summarize_group
 
 router = APIRouter(prefix="/races", tags=["races"])
@@ -219,6 +221,28 @@ def list_odds(
     if stage is not None:
         query = query.filter(Odds.stage == stage)
     return query.order_by(Odds.recorded_at.desc(), Odds.id.desc()).all()
+
+
+@router.post("/{race_id}/odds/extract", response_model=ExtractedOddsResult)
+def extract_odds_from_images(
+    race_id: int,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+) -> ExtractedOddsResult:
+    """オッズ表の画像（複数可）から組み合わせ・オッズ値を抽出する。
+
+    出走表の画像抽出と同様、DBには保存しない。ユーザーが内容を確認し、
+    既存のPOST /races/{race_id}/oddsで保存する。「入力時点」(stage)は
+    この抽出とは無関係で、フロント側でユーザーが選んだ値をそのまま使う。
+    """
+    _get_owned_race(db, race_id)
+    images = _read_images(files)
+    try:
+        return extract_odds(images)
+    except OddsExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        ) from exc
 
 
 @router.post("/{race_id}/odds", response_model=list[OddsRead], status_code=status.HTTP_201_CREATED)

@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type {
+  ExtractedOddsResult,
   ExtractedPreRaceResult,
   ExtractedPreRegistrationResult,
   Odds,
@@ -106,5 +107,15 @@ export function createOdds(
   return apiFetch<Odds[]>(`/races/${raceId}/odds`, {
     method: "POST",
     body: JSON.stringify({ stage, entries }),
+  });
+}
+
+export function extractOddsFromImages(
+  raceId: number,
+  files: File[],
+): Promise<ExtractedOddsResult> {
+  return apiFetch<ExtractedOddsResult>(`/races/${raceId}/odds/extract`, {
+    method: "POST",
+    body: imagesToFormData(files),
   });
 }

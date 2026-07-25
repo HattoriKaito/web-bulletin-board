@@ -1,13 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
-import { createOdds, getRace, listOdds } from "../api/races";
+import { createOdds, extractOddsFromImages, getRace, listOdds } from "../api/races";
 import type { Odds, Race, Stage } from "../types";
 import { PredictionPanel } from "../components/PredictionPanel";
 import { BetCombinationBadges } from "../components/BetCombinationBadges";
+import { ImageExtractPanel } from "../components/ImageExtractPanel";
 
 interface OddsFormRow {
   combination: string;
   odds_value: string;
+  uncertain: boolean;
 }
 
 const STAGE_LABELS: Record<Stage, string> = {
@@ -17,11 +19,13 @@ const STAGE_LABELS: Record<Stage, string> = {
 };
 
 function emptyRow(): OddsFormRow {
-  return { combination: "", odds_value: "" };
+  return { combination: "", odds_value: "", uncertain: false };
 }
 
 const inputClass =
   "rounded-lg border border-navy-500 bg-navy-900 px-2 py-1.5 text-base text-ink-100 placeholder:text-ink-400 focus:border-accent-400 focus:outline-none";
+const uncertainInputClass =
+  "rounded-lg border border-caution-400 bg-caution-950 px-2 py-1.5 text-base text-ink-100 focus:border-caution-400 focus:outline-none";
 
 export function OddsInputPage() {
   const { raceId } = useParams<{ raceId: string }>();
@@ -51,8 +55,10 @@ export function OddsInputPage() {
     };
   }, [raceIdNum]);
 
-  function updateRow(index: number, field: keyof OddsFormRow, value: string) {
-    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+  function updateRow(index: number, field: "combination" | "odds_value", value: string) {
+    setRows((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value, uncertain: false } : row)),
+    );
   }
 
   function addRow() {
@@ -61,6 +67,20 @@ export function OddsInputPage() {
 
   function removeRow(index: number) {
     setRows((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== index)));
+  }
+
+  async function handleExtractImages(files: File[]) {
+    // オッズ表全体を一括で読み取るため、既存の行は抽出結果で置き換える
+    // （「入力時点」の選択はここでは一切触らない）。
+    const result = await extractOddsFromImages(raceIdNum, files);
+    setRows(
+      result.rows.map((row) => ({
+        combination: row.combination,
+        odds_value: row.odds_value != null ? String(row.odds_value) : "",
+        uncertain: row.uncertain,
+      })),
+    );
+    setSavedMessage(null);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -107,6 +127,8 @@ export function OddsInputPage() {
           )}
         </h1>
 
+        <ImageExtractPanel onExtract={handleExtractImages} label="オッズ表を画像から自動入力" />
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm text-ink-300">
             入力時点
@@ -120,31 +142,33 @@ export function OddsInputPage() {
           </label>
 
           <div className="flex flex-col gap-2">
-            {rows.map((row, index) => (
-              <div key={index} className="flex flex-wrap items-center gap-2">
-                <input
-                  placeholder="組み合わせ（例：1-2-3）"
-                  value={row.combination}
-                  onChange={(e) => updateRow(index, "combination", e.target.value)}
-                  className={`${inputClass} min-w-0 flex-1 basis-32 font-mono`}
-                />
-                <input
-                  placeholder="オッズ"
-                  inputMode="decimal"
-                  value={row.odds_value}
-                  onChange={(e) => updateRow(index, "odds_value", e.target.value)}
-                  className={`${inputClass} w-20 flex-1 font-mono sm:flex-none`}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeRow(index)}
-                  disabled={rows.length === 1}
-                  className="px-2 py-1.5 text-sm text-ink-400 hover:text-ink-100 disabled:opacity-30"
-                >
-                  削除
-                </button>
-              </div>
-            ))}
+            <div className="flex max-h-[32rem] flex-col gap-2 overflow-y-auto rounded-lg border border-navy-700 p-2">
+              {rows.map((row, index) => (
+                <div key={index} className="flex flex-wrap items-center gap-2">
+                  <input
+                    placeholder="組み合わせ（例：1-2-3）"
+                    value={row.combination}
+                    onChange={(e) => updateRow(index, "combination", e.target.value)}
+                    className={`${row.uncertain ? uncertainInputClass : inputClass} min-w-0 flex-1 basis-32 font-mono`}
+                  />
+                  <input
+                    placeholder="オッズ"
+                    inputMode="decimal"
+                    value={row.odds_value}
+                    onChange={(e) => updateRow(index, "odds_value", e.target.value)}
+                    className={`${row.uncertain ? uncertainInputClass : inputClass} w-20 flex-1 font-mono sm:flex-none`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeRow(index)}
+                    disabled={rows.length === 1}
+                    className="px-2 py-1.5 text-sm text-ink-400 hover:text-ink-100 disabled:opacity-30"
+                  >
+                    削除
+                  </button>
+                </div>
+              ))}
+            </div>
             <button type="button" onClick={addRow} className="w-fit text-sm text-accent-400 underline">
               + 組み合わせを追加
             </button>

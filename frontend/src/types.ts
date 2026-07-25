@@ -53,6 +53,16 @@ export interface ExtractedPreRaceResult {
   boats: ExtractedPreRaceEntry[];
 }
 
+export interface ExtractedOddsRow {
+  combination: string;
+  odds_value: number | null;
+  uncertain: boolean;
+}
+
+export interface ExtractedOddsResult {
+  rows: ExtractedOddsRow[];
+}
+
 export interface Odds {
   id: number;
   race_id: number;
