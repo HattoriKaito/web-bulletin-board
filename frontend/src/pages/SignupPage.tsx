@@ -41,6 +41,7 @@ export function SignupPage() {
             <input
               required
               maxLength={100}
+              autoComplete="name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               className={inputClass}
@@ -51,6 +52,7 @@ export function SignupPage() {
             <input
               type="email"
               required
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={inputClass}
@@ -62,6 +64,7 @@ export function SignupPage() {
               type="password"
               required
               minLength={8}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={inputClass}

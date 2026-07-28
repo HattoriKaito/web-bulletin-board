@@ -4,6 +4,14 @@ import { createRace } from "../api/races";
 
 const RACE_TYPES = ["一般戦", "G3", "G2", "G1", "SG"];
 
+// 全国24場（ボートレース公式の場コード順）
+const VENUES = [
+  "桐生", "戸田", "江戸川", "平和島", "多摩川", "浜名湖",
+  "蒲郡", "常滑", "津", "三国", "びわこ", "住之江",
+  "尼崎", "鳴門", "丸亀", "児島", "宮島", "徳山",
+  "下関", "若松", "芦屋", "福岡", "唐津", "大村",
+];
+
 const inputClass =
   "rounded-lg border border-navy-500 bg-navy-900 px-3 py-2 text-ink-100 focus:border-accent-400 focus:outline-none";
 
@@ -47,11 +55,17 @@ export function RaceFormPage() {
             開催場
             <input
               required
+              list="venue-options"
               value={venue}
               onChange={(e) => setVenue(e.target.value)}
               placeholder="例：桐生"
               className={inputClass}
             />
+            <datalist id="venue-options">
+              {VENUES.map((v) => (
+                <option key={v} value={v} />
+              ))}
+            </datalist>
           </label>
           <label className="flex flex-col gap-1 text-sm text-ink-300">
             レース番号
