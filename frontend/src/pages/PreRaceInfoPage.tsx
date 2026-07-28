@@ -259,10 +259,10 @@ export function PreRaceInfoPage() {
             <div className="flex flex-col gap-2">
               <p className="text-sm text-green-400">{savedMessage}</p>
               <Link
-                to={`/races/${raceIdNum}/odds`}
+                to={`/races/${raceIdNum}/extra-info`}
                 className="inline-block w-fit rounded-lg bg-accent-500 px-3 py-2 text-sm font-medium text-white hover:bg-accent-600"
               >
-                → オッズ入力へ
+                → 追加情報入力へ
               </Link>
             </div>
           )}

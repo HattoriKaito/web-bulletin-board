@@ -198,6 +198,13 @@ export function ExtraInfoPage() {
             ))}
           </ul>
         )}
+
+        <Link
+          to={`/races/${raceIdNum}/odds`}
+          className="mt-6 inline-block w-fit rounded-lg bg-accent-500 px-3 py-2 text-sm font-medium text-white hover:bg-accent-600"
+        >
+          → オッズ入力へ
+        </Link>
       </div>
     </div>
   );
