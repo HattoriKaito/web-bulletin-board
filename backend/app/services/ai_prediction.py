@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from app.core.combination import COMBINATION_PATTERN
 from app.core.config import settings
-from app.models import Odds, Race, RaceEntry, Rule
+from app.models import Odds, Race, RaceEntry, RaceExtraInfo, Rule
 from app.services.claude_client import get_client
 
 STAGE_ORDER = ["entry_confirmed", "pre_race", "final"]
@@ -14,6 +14,12 @@ _STAGE_LABELS = {
     "entry_confirmed": "出走表確定時点",
     "pre_race": "直前情報公開時点",
     "final": "締切直前（最終オッズ確定時点）",
+}
+
+_CATEGORY_LABELS = {
+    "pit_report": "ピットレポート",
+    "computer_prediction": "コンピューター予想",
+    "other": "その他の追加情報",
 }
 
 
@@ -54,6 +60,7 @@ def build_input_snapshot(
     entries: list[RaceEntry],
     odds: list[Odds],
     active_rules: list[Rule],
+    extra_info: list[RaceExtraInfo],
     stage: str,
 ) -> dict[str, Any]:
     return {
@@ -79,10 +86,15 @@ def build_input_snapshot(
         "active_rules": [
             {"rule_text": r.rule_text, "category": r.category} for r in active_rules
         ],
+        "extra_info": [
+            {"category": e.category, "content": e.content} for e in extra_info
+        ],
     }
 
 
-def _build_system_prompt(stage: str, active_rules: list[Rule]) -> str:
+def _build_system_prompt(
+    stage: str, active_rules: list[Rule], extra_info: list[RaceExtraInfo]
+) -> str:
     if active_rules:
         rules_text = "\n".join(
             f"- {r.rule_text}" + (f"（カテゴリ: {r.category}）" if r.category else "")
@@ -91,13 +103,30 @@ def _build_system_prompt(stage: str, active_rules: list[Rule]) -> str:
     else:
         rules_text = "（現時点で有効なルールは登録されていません）"
 
+    if extra_info:
+        extra_info_text = "\n".join(
+            f"- [{_CATEGORY_LABELS.get(e.category, e.category)}] {e.content}"
+            for e in extra_info
+        )
+        extra_info_instruction = (
+            "この追加情報を予想の判断材料として活用した場合は、"
+            "summary_reasoning・detailed_reasoningの中で「ピットレポートによると...」"
+            "のように、どの情報を踏まえたのかが分かるように具体的に言及してください。"
+        )
+    else:
+        extra_info_text = "（登録されている追加情報はありません）"
+        extra_info_instruction = ""
+
     return (
         "あなたはボートレース（競艇）の3連単予想を支援するAIです。\n"
-        "与えられた出走表・直前情報・オッズ・ユーザー独自のルールをもとに、\n"
+        "与えられた出走表・直前情報・オッズ・ユーザー独自のルール・追加情報をもとに、\n"
         "3連単の買い目を5点（1点200円、合計1,000円想定）提案してください。\n\n"
         f"# 現在の予想段階\n{_STAGE_LABELS[stage]}\n\n"
         "# ユーザーの分析ルール（過去のレースで検証してきた経験則。優先して考慮すること）\n"
         f"{rules_text}\n\n"
+        "# 追加情報（ピットレポート・コンピューター予想等、ユーザーが取り込んだ情報）\n"
+        f"{extra_info_text}\n"
+        f"{extra_info_instruction}\n\n"
         "# 出力の指針\n"
         '- suggested_bets: "1-2-3" の形式（1着-2着-3着の艇番）で5点。重複不可、'
         "確度が高いと考える順に並べる\n"
@@ -127,6 +156,7 @@ def generate_prediction(
     entries: list[RaceEntry],
     odds: list[Odds],
     active_rules: list[Rule],
+    extra_info: list[RaceExtraInfo],
     stage: str,
 ) -> tuple[PredictionOutput, dict[str, Any]]:
     """Claude APIを呼び出し、構造化された予想を生成する。
@@ -137,8 +167,8 @@ def generate_prediction(
     途中終了・通信エラー）の場合は同一内容で1回だけリトライし、
     それでも失敗すればAIGenerationErrorを送出する。
     """
-    input_snapshot = build_input_snapshot(race, entries, odds, active_rules, stage)
-    system_prompt = _build_system_prompt(stage, active_rules)
+    input_snapshot = build_input_snapshot(race, entries, odds, active_rules, extra_info, stage)
+    system_prompt = _build_system_prompt(stage, active_rules, extra_info)
     user_message = json.dumps(input_snapshot, ensure_ascii=False, indent=2)
 
     last_error: Exception | None = None

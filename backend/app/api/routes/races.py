@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id, get_db
-from app.models import Bet, Odds, Prediction, Race, RaceEntry, Result, Rule
+from app.models import Bet, Odds, Prediction, Race, RaceEntry, RaceExtraInfo, Result, Rule
 from app.schemas.bet import BetRead, BetsConfirmInput, BetsConfirmResult
 from app.schemas.odds import OddsBulkCreate, OddsRead, Stage
 from app.schemas.odds_extraction import ExtractedOddsResult
@@ -12,6 +12,11 @@ from app.schemas.race_entry import RaceEntriesBulkUpsert, RaceEntryRead
 from app.schemas.race_entry_extraction import (
     ExtractedPreRaceResult,
     ExtractedPreRegistrationResult,
+)
+from app.schemas.race_extra_info import (
+    ExtractedExtraInfoResult,
+    RaceExtraInfoBulkCreate,
+    RaceExtraInfoRead,
 )
 from app.schemas.result import ResultRead, ResultUpsert
 from app.services.ai_prediction import STAGE_ORDER, AIGenerationError, generate_prediction
@@ -23,6 +28,7 @@ from app.services.entry_extraction import (
     extract_pre_race,
     extract_pre_registration,
 )
+from app.services.extra_info_extraction import ExtraInfoExtractionError, extract_extra_info
 from app.services.odds_extraction import OddsExtractionError, extract_odds
 from app.services.settlement import compute_bet_hits, ensure_ai_suggested_bets, summarize_group
 
@@ -265,6 +271,60 @@ def create_odds(
     return odds_rows
 
 
+@router.get("/{race_id}/extra-info", response_model=list[RaceExtraInfoRead])
+def list_extra_info(race_id: int, db: Session = Depends(get_db)) -> list[RaceExtraInfo]:
+    _get_owned_race(db, race_id)
+    return (
+        db.query(RaceExtraInfo)
+        .filter(RaceExtraInfo.race_id == race_id)
+        .order_by(RaceExtraInfo.created_at.desc(), RaceExtraInfo.id.desc())
+        .all()
+    )
+
+
+@router.post(
+    "/{race_id}/extra-info",
+    response_model=list[RaceExtraInfoRead],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_extra_info(
+    race_id: int, payload: RaceExtraInfoBulkCreate, db: Session = Depends(get_db)
+) -> list[RaceExtraInfo]:
+    """ピットレポート・コンピューター予想等の追加情報をまとめて記録する。
+
+    ODDSと同様、追記のみ（delete+replaceしない）。同じレースに何回でも
+    追加でき、AI予想生成時にはその時点で保存されている全件を読み込む。
+    """
+    _get_owned_race(db, race_id)
+    rows = [
+        RaceExtraInfo(race_id=race_id, **entry.model_dump()) for entry in payload.entries
+    ]
+    db.add_all(rows)
+    db.flush()
+    return rows
+
+
+@router.post("/{race_id}/extra-info/extract", response_model=ExtractedExtraInfoResult)
+def extract_extra_info_from_images(
+    race_id: int,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+) -> ExtractedExtraInfoResult:
+    """ピットレポート・コンピューター予想等の画像（複数可）からcategory・contentを抽出する。
+
+    出走表・オッズの画像抽出と同様、DBには保存しない。ユーザーが内容を
+    確認・修正し、既存のPOST /races/{race_id}/extra-infoで保存する。
+    """
+    _get_owned_race(db, race_id)
+    images = _read_images(files)
+    try:
+        return extract_extra_info(images)
+    except ExtraInfoExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        ) from exc
+
+
 @router.get("/{race_id}/predictions", response_model=list[PredictionRead])
 def list_predictions(race_id: int, db: Session = Depends(get_db)) -> list[Prediction]:
     _get_owned_race(db, race_id)
@@ -319,10 +379,16 @@ def create_prediction(
         .filter(Rule.user_id == user_id, Rule.is_active.is_(True))
         .all()
     )
+    extra_info = (
+        db.query(RaceExtraInfo)
+        .filter(RaceExtraInfo.race_id == race_id)
+        .order_by(RaceExtraInfo.created_at)
+        .all()
+    )
 
     try:
         output, input_snapshot = generate_prediction(
-            race, entries, odds, active_rules, stage
+            race, entries, odds, active_rules, extra_info, stage
         )
     except AIGenerationError as exc:
         raise HTTPException(

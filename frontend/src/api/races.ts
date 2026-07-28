@@ -1,11 +1,14 @@
 import { apiFetch } from "./client";
 import type {
+  ExtractedExtraInfoResult,
   ExtractedOddsResult,
   ExtractedPreRaceResult,
   ExtractedPreRegistrationResult,
+  ExtraInfoCategory,
   Odds,
   Race,
   RaceEntry,
+  RaceExtraInfo,
   Stage,
 } from "../types";
 
@@ -115,6 +118,35 @@ export function extractOddsFromImages(
   files: File[],
 ): Promise<ExtractedOddsResult> {
   return apiFetch<ExtractedOddsResult>(`/races/${raceId}/odds/extract`, {
+    method: "POST",
+    body: imagesToFormData(files),
+  });
+}
+
+export interface ExtraInfoEntryInput {
+  category: ExtraInfoCategory;
+  content: string;
+}
+
+export function listExtraInfo(raceId: number): Promise<RaceExtraInfo[]> {
+  return apiFetch<RaceExtraInfo[]>(`/races/${raceId}/extra-info`);
+}
+
+export function createExtraInfo(
+  raceId: number,
+  entries: ExtraInfoEntryInput[],
+): Promise<RaceExtraInfo[]> {
+  return apiFetch<RaceExtraInfo[]>(`/races/${raceId}/extra-info`, {
+    method: "POST",
+    body: JSON.stringify({ entries }),
+  });
+}
+
+export function extractExtraInfoFromImages(
+  raceId: number,
+  files: File[],
+): Promise<ExtractedExtraInfoResult> {
+  return apiFetch<ExtractedExtraInfoResult>(`/races/${raceId}/extra-info/extract`, {
     method: "POST",
     body: imagesToFormData(files),
   });

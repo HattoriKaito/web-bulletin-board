@@ -8,6 +8,7 @@ from app.models.rule import Rule
 from app.models.bet import Bet
 from app.models.result import Result
 from app.models.odds import Odds
+from app.models.race_extra_info import RaceExtraInfo
 
 __all__ = [
     "User",
@@ -20,4 +21,5 @@ __all__ = [
     "Bet",
     "Result",
     "Odds",
+    "RaceExtraInfo",
 ]

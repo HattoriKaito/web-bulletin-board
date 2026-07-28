@@ -172,3 +172,22 @@ export interface RaceTypeStats {
   hit_count: number;
   hit_rate: number;
 }
+
+export type ExtraInfoCategory = "pit_report" | "computer_prediction" | "other";
+
+export interface RaceExtraInfo {
+  id: number;
+  race_id: number;
+  category: ExtraInfoCategory;
+  content: string;
+  created_at: string;
+}
+
+export interface ExtractedExtraInfoItem {
+  category: ExtraInfoCategory;
+  content: string;
+}
+
+export interface ExtractedExtraInfoResult {
+  items: ExtractedExtraInfoItem[];
+}

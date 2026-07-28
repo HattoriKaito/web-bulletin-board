@@ -70,6 +70,9 @@ export function RaceListPage() {
                 <Link to={`/races/${race.id}/pre-race`} className="py-1 text-accent-400 underline">
                   直前情報
                 </Link>
+                <Link to={`/races/${race.id}/extra-info`} className="py-1 text-accent-400 underline">
+                  追加情報
+                </Link>
                 <Link to={`/races/${race.id}/odds`} className="py-1 text-accent-400 underline">
                   オッズ
                 </Link>
