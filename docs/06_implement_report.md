@@ -171,7 +171,7 @@ HMRを妨げないようにした。主要画面のレスポンシブレイア�
 ## 11. Step 10：本番デプロイ設定
 
 **実装内容**：Supabase（DB）／Render（バックエンド）／Vercel（フロントエンド）への
-デプロイ手順を`docs/05_deployment.md`としてまとめ、`render.yaml`（Blueprint）と
+デプロイ手順を`docs/08_deployment.md`としてまとめ、`render.yaml`（Blueprint）と
 `frontend/vercel.json`（SPAのルーティング用rewrite）を追加。SupabaseはSession poolerを
 使う必要がある（Transaction poolerは本アプリのRLSが依存する`SET LOCAL`のセッション単位の
 状態を保証しないため）ことを明記。本番用に`DB_SSLMODE`設定を追加し、`.gitignore`で

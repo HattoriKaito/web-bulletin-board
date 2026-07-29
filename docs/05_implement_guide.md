@@ -3,7 +3,7 @@
 > **本書の位置づけ**：本書は、第三者（レビュアー等）が本リポジトリを入手した状態から、
 > ローカル環境での動作確認、および本番環境（Supabase／Render／Vercel）への
 > デプロイまでを再現できることを目的とした手順書である。
-> 本番デプロイの詳細な補足・トラブルシューティングは既存の `docs/05_deployment.md`
+> 本番デプロイの詳細な補足・トラブルシューティングは既存の `docs/08_deployment.md`
 > （デプロイ専用の詳細手順書）も合わせて参照すること。
 
 ## 1. 技術スタック一覧
@@ -84,7 +84,7 @@ docker run --name boatai-postgres \
 ### 3-4. `app_user`ロールの作成（RLS運用ロール）
 
 本アプリはランタイム接続に `NOBYPASSRLS` の専用ロール `app_user` を使う設計（`db/setup_rls.sql`
-参照）。本番のSupabase向け手順（`docs/05_deployment.md` 1章）と同じ内容を、ローカルの
+参照）。本番のSupabase向け手順（`docs/08_deployment.md` 1章）と同じ内容を、ローカルの
 Postgresに対しても一度だけ実行する。
 
 ```bash
@@ -187,7 +187,7 @@ npm run dev
 
 本番構成はフロントエンド＝Vercel、バックエンド＝Render、DB＝Supabase（すべて無料枠）。
 詳細な手順・トラブルシューティング・接続方式の選定理由（Session pooler固定の理由等）は
-`docs/05_deployment.md` に譲り、ここでは全体の流れのみ示す。
+`docs/08_deployment.md` に譲り、ここでは全体の流れのみ示す。
 
 1. **Supabaseプロジェクトを作成**し、SQL Editorで`app_user`ロールを作成する
    （ローカル手順3-4と同内容。パスワードは本番用に別途生成する）。
@@ -202,7 +202,7 @@ npm run dev
    環境変数`VITE_API_BASE_URL`にRenderのバックエンドURLを設定する。
 5. **CORS設定**：RenderのバックエンドサービスにVercelの本番URLを
    `FRONTEND_ORIGIN`として設定する（末尾スラッシュなし）。
-6. **本番動作確認チェックリスト**を実施する（`docs/05_deployment.md` 6章に
+6. **本番動作確認チェックリスト**を実施する（`docs/08_deployment.md` 6章に
    全項目を記載。サインアップ〜AI予想生成〜結果記録〜収支表示、および
    別ユーザーでのRLS分離確認まで一通り含む）。
 

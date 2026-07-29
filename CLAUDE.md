@@ -50,4 +50,4 @@ ER図は `docs/03_detailed_design.md` のMermaid図を正とする。主なテ�
 - `docs/02_requirement_definition.md` : 要件定義書（機能レベル分類・スコープアウト）
 - `docs/03_detailed_design.md` : 詳細設計書（ER図・画面遷移図・セキュリティ仕様）
 - `docs/04_design_report.md` : 設計中間報告書
-- `docs/05_deployment.md` : デプロイ手順書（Supabase / Render / Vercel）
+- `docs/08_deployment.md` : デプロイ手順書（Supabase / Render / Vercel）
