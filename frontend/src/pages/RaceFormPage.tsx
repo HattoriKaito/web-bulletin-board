@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { createRace } from "../api/races";
 
@@ -15,18 +15,44 @@ const VENUES = [
 const inputClass =
   "rounded-lg border border-navy-500 bg-navy-900 px-3 py-2 text-ink-100 focus:border-accent-400 focus:outline-none";
 
+function parseRaceNumber(value: string): number | null {
+  if (!/^\d+$/.test(value)) return null;
+  const n = Number(value);
+  if (n < 1 || n > 12) return null;
+  return n;
+}
+
 export function RaceFormPage() {
   const navigate = useNavigate();
   const [venue, setVenue] = useState("");
-  const [raceNumber, setRaceNumber] = useState(1);
+  const [raceNumberInput, setRaceNumberInput] = useState("1");
   const [raceDate, setRaceDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [raceType, setRaceType] = useState(RACE_TYPES[0]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  function handleRaceNumberChange(e: ChangeEvent<HTMLInputElement>) {
+    // 数字以外は捨てるが、途中入力中は空文字・範囲外の値もそのまま保持する
+    // （Numberに変換して即座にstateへ書き戻すと、先頭桁削除時に0が補完される）。
+    setRaceNumberInput(e.target.value.replace(/\D/g, ""));
+    setError(null);
+  }
+
+  function handleRaceNumberBlur() {
+    if (raceNumberInput === "") return;
+    if (parseRaceNumber(raceNumberInput) === null) {
+      setError("レース番号は1〜12の数値で入力してください");
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    const raceNumber = parseRaceNumber(raceNumberInput);
+    if (raceNumber === null) {
+      setError("レース番号は1〜12の数値で入力してください");
+      return;
+    }
     setSubmitting(true);
     try {
       const race = await createRace({
@@ -70,12 +96,13 @@ export function RaceFormPage() {
           <label className="flex flex-col gap-1 text-sm text-ink-300">
             レース番号
             <input
-              type="number"
-              min={1}
-              max={12}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               required
-              value={raceNumber}
-              onChange={(e) => setRaceNumber(Number(e.target.value))}
+              value={raceNumberInput}
+              onChange={handleRaceNumberChange}
+              onBlur={handleRaceNumberBlur}
               className={`${inputClass} font-mono`}
             />
           </label>
